@@ -26,6 +26,8 @@ internal static class DiagnosticDescriptors
 
     // @formatter:off
     
+    // TODO: Create analyzer for this with code fix
+
     public static readonly DiagnosticDescriptor InvalidClassAccessibility = new("AZTBGEN001",
         "Adapter class invalid accessibility modifier", 
         "Adapter class '{0}' should be public", 
