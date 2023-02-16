@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FisTech.Persistence.AzureTable", "src\FisTech.Persistence.AzureTable\FisTech.Persistence.AzureTable.csproj", "{9D958425-3C09-452E-9FF5-9F3B9272707E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FisTech.Persistence.AzureTable.SourceGenerators", "src\FisTech.Persistence.AzureTable.SourceGenerators\FisTech.Persistence.AzureTable.SourceGenerators.csproj", "{A4804A9D-22BC-4396-B798-82F00896BA53}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,11 +29,16 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{9D958425-3C09-452E-9FF5-9F3B9272707E} = {2CD24588-A9D0-4F80-BD39-9D7FB3B364D1}
+		{A4804A9D-22BC-4396-B798-82F00896BA53} = {2CD24588-A9D0-4F80-BD39-9D7FB3B364D1}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{9D958425-3C09-452E-9FF5-9F3B9272707E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9D958425-3C09-452E-9FF5-9F3B9272707E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9D958425-3C09-452E-9FF5-9F3B9272707E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9D958425-3C09-452E-9FF5-9F3B9272707E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4804A9D-22BC-4396-B798-82F00896BA53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4804A9D-22BC-4396-B798-82F00896BA53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4804A9D-22BC-4396-B798-82F00896BA53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4804A9D-22BC-4396-B798-82F00896BA53}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
