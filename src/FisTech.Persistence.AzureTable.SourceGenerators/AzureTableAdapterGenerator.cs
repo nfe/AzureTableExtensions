@@ -71,7 +71,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             }
 
             void AppendClassDeclaration() => sourceTextBuilder.AppendLine($$"""
-
+                    
                     namespace {{adapter.ContainingNamespace.ToDisplayString()}};
                     
                     public partial class {{adapter.Name}} : {{AdapterInterfaceName}}<{{sourceType.Name}}>
@@ -93,10 +93,10 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 }
 
                 sourceTextBuilder.AppendLine("""
-                            
+                    
                             return entity;
                         }
-
+                    
                     """);
             }
 
@@ -119,7 +119,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 }
 
                 sourceTextBuilder.AppendLine("""
-                            
+                    
                             return item;
                         }
                     """);

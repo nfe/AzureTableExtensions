@@ -51,7 +51,7 @@ public class AzureTableAdapterGeneratorTests
                     var entity = new TableEntity(item.Country, item.State);
                     entity.Add(nameof(TestModel.State), item.State);
                     entity.Add(nameof(TestModel.Country), item.Country);
-                    
+
                     return entity;
                 }
 
@@ -60,7 +60,7 @@ public class AzureTableAdapterGeneratorTests
                     var item = new TestModel();
                     item.State = entity.GetString(nameof(TestModel.State));
                     item.Country = entity.GetString(nameof(TestModel.Country));
-                    
+
                     return item;
                 }
             }
