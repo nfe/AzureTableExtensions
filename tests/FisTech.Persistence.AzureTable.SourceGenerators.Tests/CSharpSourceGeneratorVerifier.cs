@@ -8,7 +8,9 @@ namespace FisTech.Persistence.AzureTable.SourceGenerators.Tests;
 
 public static class CSharpSourceGeneratorVerifier<TSourceGenerator> where TSourceGenerator : ISourceGenerator, new()
 {
+#pragma warning disable CA1034
     public class Test : CSharpSourceGeneratorTest<TSourceGenerator, XUnitVerifier>
+#pragma warning restore CA1034
     {
         public LanguageVersion LanguageVersion { get; set; } = LanguageVersion.Default;
 
