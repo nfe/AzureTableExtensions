@@ -16,6 +16,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
     private const string PartitionKeyAttributeName = "PartitionKeyAttribute";
     private const string RowKeyAttributeName = "RowKeyAttribute";
+    private const string IgnoreSourcePropertyAttributeNamedArgument = "IgnoreSourceProperty";
 
     public void Initialize(GeneratorInitializationContext context) { }
 
@@ -23,110 +24,132 @@ public class AzureTableAdapterGenerator : ISourceGenerator
     {
         foreach (INamedTypeSymbol? adapter in context.Compilation.Assembly.GlobalNamespace.DescendantTypeMembers(t =>
             t.BaseType is { Name: AdapterBaseTypeName, IsGenericType: true, Arity: 1 }))
+            GenerateAdapter(context, adapter);
+    }
+
+    private static void GenerateAdapter(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol)
+    {
+        if (!IsValidAdapterClass(context, adapterSymbol))
+            return;
+
+        ITypeSymbol sourceType = adapterSymbol.BaseType!.TypeArguments[0];
+        ImmutableArray<AttributeData> adapterAttributes = adapterSymbol.GetAttributes();
+        ImmutableArray<IPropertySymbol> sourceProperties = sourceType.GetInstancePublicProperties().ToImmutableArray();
+        var ignoreProperties = new HashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
+
+        if (!TryGetSchemaPropertyFromAdapterAttributes(PartitionKeyAttributeName,
+            out IPropertySymbol? partitionKeyProperty, out var ignorePartitionKeySourceProperty))
+            return;
+
+        if (ignorePartitionKeySourceProperty)
+            ignoreProperties.Add(partitionKeyProperty!);
+
+        if (!TryGetSchemaPropertyFromAdapterAttributes(RowKeyAttributeName, out IPropertySymbol? rowKeyProperty,
+            out var ignoreRowKeySourceProperty))
+            return;
+
+        if (ignoreRowKeySourceProperty)
+            ignoreProperties.Add(rowKeyProperty!);
+
+        var sourceTextBuilder = new StringBuilder();
+
+        AppendUsingStatements();
+
+        AppendClassDeclaration();
+
+        AppendItemToEntityAdaptMethod();
+
+        AppendEntityToItemAdaptMethod();
+
+        AppendClosingBraces();
+
+        context.AddSource($"{adapterSymbol.Name}.g.cs", SourceText.From(sourceTextBuilder.ToString(), Encoding.UTF8));
+
+        bool TryGetSchemaPropertyFromAdapterAttributes(string attributeName, out IPropertySymbol? sourcePropertySymbol,
+            out bool ignoreSourceProperty) => TryGetSchemaPropertyFromAttribute(context, adapterSymbol,
+            sourceProperties, adapterAttributes, attributeName, out sourcePropertySymbol, out ignoreSourceProperty);
+
+        void AppendUsingStatements()
         {
-            if (!IsValidAdapterClass(context, adapter))
-                continue;
-
-            ImmutableArray<AttributeData> adapterAttributes = adapter.GetAttributes();
-
-            ITypeSymbol sourceType = adapter.BaseType!.TypeArguments[0];
-            ImmutableArray<IPropertySymbol> sourceProperties =
-                sourceType.GetInstancePublicProperties().ToImmutableArray();
-
-            if (!TryGetPropertyFromAdapterAttributes(PartitionKeyAttributeName,
-                out IPropertySymbol? partitionKeyProperty, nameof(String)))
-                continue;
-
-            if (!TryGetPropertyFromAdapterAttributes(RowKeyAttributeName, out IPropertySymbol? rowKeyProperty,
-                nameof(String)))
-                continue;
-
-            var sourceTextBuilder = new StringBuilder();
-
-            AppendUsingStatements();
-
-            AppendClassDeclaration();
-
-            AppendItemToEntityAdaptMethod();
-
-            AppendEntityToItemAdaptMethod();
-
-            AppendClosingBraces();
-
-            context.AddSource($"{adapter.Name}.g.cs", SourceText.From(sourceTextBuilder.ToString(), Encoding.UTF8));
-
-            bool TryGetPropertyFromAdapterAttributes(string attributeName, out IPropertySymbol? sourcePropertySymbol,
-                string? targetTypeName = null) => TryGetProperty(context, adapter, adapterAttributes, attributeName,
-                sourceProperties, out sourcePropertySymbol, targetTypeName);
-
-            void AppendUsingStatements()
+            var usingStatements = new HashSet<string>(StringComparer.Ordinal)
             {
-                var usingStatements = new HashSet<string>(StringComparer.Ordinal)
-                {
-                    EntityTypeNamespace, AdapterNamespace, sourceType.ContainingNamespace.ToDisplayString()
-                };
+                EntityTypeNamespace, AdapterNamespace, sourceType.ContainingNamespace.ToDisplayString()
+            };
 
-                foreach (var statement in usingStatements)
-                    sourceTextBuilder.AppendLine($"using {statement};");
-            }
-
-            void AppendClassDeclaration() => sourceTextBuilder.AppendLine($$"""
-                    
-                    namespace {{adapter.ContainingNamespace.ToDisplayString()}};
-                    
-                    public partial class {{adapter.Name}} : {{AdapterInterfaceName}}<{{sourceType.Name}}>
-                    {
-                    """);
-
-            void AppendItemToEntityAdaptMethod()
-            {
-                sourceTextBuilder.AppendLine($$"""
-                        public {{EntityInterfaceName}} Adapt({{sourceType.Name}} item)
-                        {
-                            var entity = new {{EntityTypeName}}(item.{{partitionKeyProperty!.Name}}, item.{{rowKeyProperty!.Name}});
-                    """);
-
-                foreach (IPropertySymbol property in sourceProperties)
-                {
-                    sourceTextBuilder.AppendLine(
-                        $$"""        entity.Add(nameof({{sourceType.Name}}.{{property.Name}}), item.{{property.Name}});""");
-                }
-
-                sourceTextBuilder.AppendLine("""
-                    
-                            return entity;
-                        }
-                    
-                    """);
-            }
-
-            void AppendEntityToItemAdaptMethod()
-            {
-                sourceTextBuilder.AppendLine($$"""
-                        public {{sourceType.Name}} Adapt({{EntityTypeName}} entity)
-                        {
-                            var item = new {{sourceType.Name}}();
-                    """);
-
-                foreach (IPropertySymbol property in sourceProperties)
-                {
-                    var typeName = property.Type.ToString();
-                    var getMethod = GetTableEntityGetMethod(typeName);
-
-                    sourceTextBuilder.AppendLine($$"""
-                                item.{{property.Name}} = entity.{{getMethod}}(nameof({{sourceType.Name}}.{{property.Name}}));
-                        """);
-                }
-
-                sourceTextBuilder.AppendLine("""
-                    
-                            return item;
-                        }
-                    """);
-            }
-
-            void AppendClosingBraces() => sourceTextBuilder.Append('}');
+            foreach (var statement in usingStatements.OrderBy(s => s))
+                sourceTextBuilder.AppendLine($"using {statement};");
         }
+
+        void AppendClassDeclaration() => sourceTextBuilder.AppendLine($$"""
+            
+            namespace {{adapterSymbol.ContainingNamespace.ToDisplayString()}};
+            
+            public partial class {{adapterSymbol.Name}} : {{AdapterInterfaceName}}<{{sourceType.Name}}>
+            {
+            """);
+
+        void AppendItemToEntityAdaptMethod()
+        {
+            sourceTextBuilder.AppendLine($$"""
+                    public {{EntityInterfaceName}} Adapt({{sourceType.Name}} item)
+                    {
+                        var entity = new {{EntityTypeName}}(item.{{partitionKeyProperty!.Name}}, item.{{rowKeyProperty!.Name}});
+                """);
+
+            foreach (IPropertySymbol property in sourceProperties.Where(p => !ignoreProperties.Contains(p)))
+            {
+                sourceTextBuilder.AppendLine(
+                    $$"""        entity.Add(nameof({{sourceType.Name}}.{{property.Name}}), item.{{property.Name}});""");
+            }
+
+            sourceTextBuilder.AppendLine("""
+                
+                        return entity;
+                    }
+                
+                """);
+        }
+
+        void AppendEntityToItemAdaptMethod()
+        {
+            sourceTextBuilder.AppendLine($$"""
+                    public {{sourceType.Name}} Adapt({{EntityTypeName}} entity)
+                    {
+                        var item = new {{sourceType.Name}}();
+                """);
+
+            if (ignorePartitionKeySourceProperty)
+            {
+                sourceTextBuilder.AppendLine($$"""
+                            item.{{partitionKeyProperty!.Name}} = entity.PartitionKey;
+                    """);
+            }
+            
+            if (ignoreRowKeySourceProperty)
+            {
+                sourceTextBuilder.AppendLine($$"""
+                            item.{{rowKeyProperty!.Name}} = entity.RowKey;
+                    """);
+            }
+
+            foreach (IPropertySymbol property in sourceProperties.Where(p => !ignoreProperties.Contains(p)))
+            {
+                var typeName = property.Type.ToString();
+                var getMethod = GetTableEntityGetMethod(typeName);
+
+                sourceTextBuilder.AppendLine($$"""
+                            item.{{property.Name}} = entity.{{getMethod}}(nameof({{sourceType.Name}}.{{property.Name}}));
+                    """);
+            }
+
+            sourceTextBuilder.AppendLine("""
+                
+                        return item;
+                    }
+                """);
+        }
+
+        void AppendClosingBraces() => sourceTextBuilder.Append('}');
     }
 
     private static bool IsValidAdapterClass(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol)
@@ -161,56 +184,55 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             adapterSymbol.Locations.FirstOrDefault(), adapterSymbol.ToDisplayString()));
     }
 
-    private static bool TryGetProperty(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol,
-        ImmutableArray<AttributeData> attributes, string attributeName,
-        ImmutableArray<IPropertySymbol> sourcePropertiesSymbols, out IPropertySymbol? sourcePropertySymbol,
-        string? targetTypeName = null)
+    private static bool TryGetSchemaPropertyFromAttribute(GeneratorExecutionContext context,
+        INamedTypeSymbol adapterSymbol, ImmutableArray<IPropertySymbol> sourcePropertiesSymbols,
+        ImmutableArray<AttributeData> attributes, string attributeName, out IPropertySymbol? sourcePropertySymbol,
+        out bool ignoreSourceProperty)
     {
-        sourcePropertySymbol = null;
+        sourcePropertySymbol = default!;
+        // TODO: Get default value from attribute declaration
+        ignoreSourceProperty = true;
 
         AttributeData? attribute = attributes.FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
 
         if (attribute is null)
         {
-            ReportAttributeNotFoundError();
+            context.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.PartitionKeyAttributeNotFound,
+                adapterSymbol.Locations.FirstOrDefault(), adapterSymbol.ToDisplayString()));
+
             return false;
         }
 
-        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
+        if (attribute.NamedArguments.FirstOrDefault(a => a.Key == IgnoreSourcePropertyAttributeNamedArgument)
+                .Value.Value is bool ignoreSourcePropertyValue)
+            ignoreSourceProperty = ignoreSourcePropertyValue;
 
-        IPropertySymbol? property = sourcePropertiesSymbols.FirstOrDefault(p => p.Name == propertyName);
-
-        if (property is null)
-        {
-            ReportPropertyNotFoundError();
-            return false;
-        }
-
-        // TODO: Allow supported types
-        if (targetTypeName is not null && property.Type.Name != targetTypeName)
-        {
-            ReportInvalidPropertyTypeError();
-            return false;
-        }
-
-        sourcePropertySymbol = property;
-
-        return true;
-
-        void ReportAttributeNotFoundError() => context.ReportDiagnostic(Diagnostic.Create(
-            DiagnosticDescriptors.PartitionKeyAttributeNotFound, adapterSymbol.Locations.FirstOrDefault(),
-            adapterSymbol.ToDisplayString()));
-
-        void ReportPropertyNotFoundError() => context.ReportDiagnostic(Diagnostic.Create(
-            DiagnosticDescriptors.SourcePropertyNotFound, adapterSymbol.Locations.FirstOrDefault(),
-            adapterSymbol.ToDisplayString(), attribute.AttributeClass!.ToDisplayString(), propertyName));
-
-        void ReportInvalidPropertyTypeError() => context.ReportDiagnostic(Diagnostic.Create(
-            DiagnosticDescriptors.InvalidSourcePropertyType, adapterSymbol.Locations.FirstOrDefault(),
-            adapterSymbol.ToDisplayString(), attribute.AttributeClass!.ToDisplayString(), propertyName, targetTypeName,
-            property.Type.ToDisplayString()));
+        return TryGetPropertyFromAttribute(context, adapterSymbol, sourcePropertiesSymbols, attribute,
+            out sourcePropertySymbol);
     }
 
+    private static bool TryGetPropertyFromAttribute(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol,
+        ImmutableArray<IPropertySymbol> sourcePropertiesSymbols, AttributeData propertyAttribute,
+        out IPropertySymbol? sourcePropertySymbol)
+    {
+        // TODO: Validate PropertyAttributeBase type
+
+        var propertyName = (string)propertyAttribute.ConstructorArguments[0].Value!;
+
+        sourcePropertySymbol = sourcePropertiesSymbols.FirstOrDefault(p => p.Name == propertyName);
+
+        if (sourcePropertySymbol is null)
+        {
+            // TODO: Check multiple locations
+            context.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.SourcePropertyNotFound,
+                propertyAttribute.AttributeClass!.Locations.FirstOrDefault(), adapterSymbol.ToDisplayString(),
+                propertyName));
+        }
+
+        return true;
+    }
+
+    // TODO: Auto convert unsupported types
     private static string GetTableEntityGetMethod(string typeName) => typeName switch
     {
         "string" or "string?" => "GetString",

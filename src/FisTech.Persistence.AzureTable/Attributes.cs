@@ -10,12 +10,19 @@ public abstract class PropertyAttributeBase : Attribute
     public string SourcePropertyName { get; }
 }
 
-public sealed class PartitionKeyAttribute : PropertyAttributeBase
+public abstract class SchemaPropertyAttributeBase : PropertyAttributeBase
+{
+    protected SchemaPropertyAttributeBase(string sourcePropertyName) : base(sourcePropertyName) { }
+
+    public bool IgnoreSourceProperty { get; set; } = true;
+}
+
+public sealed class PartitionKeyAttribute : SchemaPropertyAttributeBase
 {
     public PartitionKeyAttribute(string sourcePropertyName) : base(sourcePropertyName) { }
 }
 
-public sealed class RowKeyAttribute : PropertyAttributeBase
+public sealed class RowKeyAttribute : SchemaPropertyAttributeBase
 {
     public RowKeyAttribute(string sourcePropertyName) : base(sourcePropertyName) { }
 }

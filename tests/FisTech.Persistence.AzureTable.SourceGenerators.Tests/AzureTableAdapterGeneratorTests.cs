@@ -49,6 +49,75 @@ public class AzureTableAdapterGeneratorTests
                 public ITableEntity Adapt(TestModel item)
                 {
                     var entity = new TableEntity(item.Country, item.State);
+
+                    return entity;
+                }
+
+                public TestModel Adapt(TableEntity entity)
+                {
+                    var item = new TestModel();
+                    item.Country = entity.PartitionKey;
+                    item.State = entity.RowKey;
+
+                    return item;
+                }
+            }
+            """;
+
+        var test = new VerifyCS.Test
+        {
+            TestState =
+            {
+                AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
+                Sources = { modelSource, adapterSource },
+                GeneratedSources =
+                {
+                    (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
+                        SourceText.From(expected, Encoding.UTF8))
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task Generator_AddSchemaSourceProperties_ReturnsAdapter()
+    {
+        const string modelSource = """
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public string State { get; set; }
+
+                public string Country { get; set; }
+            }
+            """;
+
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(TestModel.Country), IgnoreSourceProperty = false)]
+            [RowKey(nameof(TestModel.State), IgnoreSourceProperty = false)]
+            public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+            """;
+
+        const string expected = """
+            using Azure.Data.Tables;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
+            {
+                public ITableEntity Adapt(TestModel item)
+                {
+                    var entity = new TableEntity(item.Country, item.State);
                     entity.Add(nameof(TestModel.State), item.State);
                     entity.Add(nameof(TestModel.Country), item.Country);
 

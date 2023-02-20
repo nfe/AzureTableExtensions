@@ -60,12 +60,12 @@ internal static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor SourcePropertyNotFound = new("AZTBGEN007",
         "Adapter class source property does not exists on source type",
-        "Adapter class '{0}' does not have a valid argument for '{1}': Source property '{2}' not found",
+        "Adapter class '{0}' does not have '{1}' property",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     public static readonly DiagnosticDescriptor InvalidSourcePropertyType = new("AZTBGEN008",
         "Adapter class source property invalid type",
-        "Adapter class '{0}' does not have a valid argument for '{1}': Source property '{2}' should be of '{3}' type instead '{4}'",
+        "Adapter class '{0}' property '{1}' should be of '{2}' type instead '{3}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     // @formatter:on
