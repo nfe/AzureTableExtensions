@@ -16,6 +16,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
     private const string PartitionKeyAttributeName = "PartitionKeyAttribute";
     private const string RowKeyAttributeName = "RowKeyAttribute";
+
     private const string IgnoreSourcePropertyAttributeNamedArgument = "IgnoreSourceProperty";
 
     public void Initialize(GeneratorInitializationContext context) { }
@@ -32,24 +33,39 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         if (!IsValidAdapterClass(context, adapterSymbol))
             return;
 
-        ITypeSymbol sourceType = adapterSymbol.BaseType!.TypeArguments[0];
-        ImmutableArray<AttributeData> adapterAttributes = adapterSymbol.GetAttributes();
-        ImmutableArray<IPropertySymbol> sourceProperties = sourceType.GetInstancePublicProperties().ToImmutableArray();
-        var ignoreProperties = new HashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
+        ITypeSymbol sourceSymbol = adapterSymbol.BaseType!.TypeArguments[0];
 
-        if (!TryGetSchemaPropertyFromAdapterAttributes(PartitionKeyAttributeName,
-            out IPropertySymbol? partitionKeyProperty, out var ignorePartitionKeySourceProperty))
+        IPropertySymbol? partitionKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
+            PartitionKeyAttributeName, out var ignorePartitionKeySourceProperty);
+
+        if (partitionKeyProperty is null)
+        {
+            ReportSourcePropertyNotFound(PartitionKeyAttributeName);
             return;
+        }
+
+        IPropertySymbol? rowKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
+            RowKeyAttributeName, out var ignoreRowKeySourceProperty);
+
+        if (rowKeyProperty is null)
+        {
+            ReportSourcePropertyNotFound(RowKeyAttributeName);
+            return;
+        }
+
+        var ignoredProperties = new HashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
 
         if (ignorePartitionKeySourceProperty)
-            ignoreProperties.Add(partitionKeyProperty!);
-
-        if (!TryGetSchemaPropertyFromAdapterAttributes(RowKeyAttributeName, out IPropertySymbol? rowKeyProperty,
-            out var ignoreRowKeySourceProperty))
-            return;
+            ignoredProperties.Add(partitionKeyProperty);
 
         if (ignoreRowKeySourceProperty)
-            ignoreProperties.Add(rowKeyProperty!);
+            ignoredProperties.Add(rowKeyProperty);
+        
+        // TODO: Check IgnoreAttribute
+
+        ImmutableArray<IPropertySymbol> sourceProperties = sourceSymbol.GetInstancePublicProperties()
+            .Where(p => !ignoredProperties.Contains(p))
+            .ToImmutableArray();
 
         var sourceTextBuilder = new StringBuilder();
 
@@ -65,15 +81,15 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         context.AddSource($"{adapterSymbol.Name}.g.cs", SourceText.From(sourceTextBuilder.ToString(), Encoding.UTF8));
 
-        bool TryGetSchemaPropertyFromAdapterAttributes(string attributeName, out IPropertySymbol? sourcePropertySymbol,
-            out bool ignoreSourceProperty) => TryGetSchemaPropertyFromAttribute(context, adapterSymbol,
-            sourceProperties, adapterAttributes, attributeName, out sourcePropertySymbol, out ignoreSourceProperty);
+        void ReportSourcePropertyNotFound(string attributeName) => context.ReportDiagnostic(
+            Diagnostic.Create(DiagnosticDescriptors.SourcePropertyNotFound, adapterSymbol.Locations.FirstOrDefault(),
+                adapterSymbol.ToDisplayString(), attributeName));
 
         void AppendUsingStatements()
         {
             var usingStatements = new HashSet<string>(StringComparer.Ordinal)
             {
-                EntityTypeNamespace, AdapterNamespace, sourceType.ContainingNamespace.ToDisplayString()
+                EntityTypeNamespace, AdapterNamespace, sourceSymbol.ContainingNamespace.ToDisplayString()
             };
 
             foreach (var statement in usingStatements.OrderBy(s => s))
@@ -84,22 +100,22 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             
             namespace {{adapterSymbol.ContainingNamespace.ToDisplayString()}};
             
-            public partial class {{adapterSymbol.Name}} : {{AdapterInterfaceName}}<{{sourceType.Name}}>
+            public partial class {{adapterSymbol.Name}} : {{AdapterInterfaceName}}<{{sourceSymbol.Name}}>
             {
             """);
 
         void AppendItemToEntityAdaptMethod()
         {
             sourceTextBuilder.AppendLine($$"""
-                    public {{EntityInterfaceName}} Adapt({{sourceType.Name}} item)
+                    public {{EntityInterfaceName}} Adapt({{sourceSymbol.Name}} item)
                     {
-                        var entity = new {{EntityTypeName}}(item.{{partitionKeyProperty!.Name}}, item.{{rowKeyProperty!.Name}});
+                        var entity = new {{EntityTypeName}}(item.{{partitionKeyProperty.Name}}, item.{{rowKeyProperty.Name}});
                 """);
 
-            foreach (IPropertySymbol property in sourceProperties.Where(p => !ignoreProperties.Contains(p)))
+            foreach (IPropertySymbol property in sourceProperties)
             {
                 sourceTextBuilder.AppendLine(
-                    $$"""        entity.Add(nameof({{sourceType.Name}}.{{property.Name}}), item.{{property.Name}});""");
+                    $$"""        entity.Add(nameof({{sourceSymbol.Name}}.{{property.Name}}), item.{{property.Name}});""");
             }
 
             sourceTextBuilder.AppendLine("""
@@ -113,32 +129,32 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         void AppendEntityToItemAdaptMethod()
         {
             sourceTextBuilder.AppendLine($$"""
-                    public {{sourceType.Name}} Adapt({{EntityTypeName}} entity)
+                    public {{sourceSymbol.Name}} Adapt({{EntityTypeName}} entity)
                     {
-                        var item = new {{sourceType.Name}}();
+                        var item = new {{sourceSymbol.Name}}();
                 """);
 
             if (ignorePartitionKeySourceProperty)
             {
                 sourceTextBuilder.AppendLine($$"""
-                            item.{{partitionKeyProperty!.Name}} = entity.PartitionKey;
-                    """);
-            }
-            
-            if (ignoreRowKeySourceProperty)
-            {
-                sourceTextBuilder.AppendLine($$"""
-                            item.{{rowKeyProperty!.Name}} = entity.RowKey;
+                            item.{{partitionKeyProperty.Name}} = entity.PartitionKey;
                     """);
             }
 
-            foreach (IPropertySymbol property in sourceProperties.Where(p => !ignoreProperties.Contains(p)))
+            if (ignoreRowKeySourceProperty)
+            {
+                sourceTextBuilder.AppendLine($$"""
+                            item.{{rowKeyProperty.Name}} = entity.RowKey;
+                    """);
+            }
+
+            foreach (IPropertySymbol property in sourceProperties)
             {
                 var typeName = property.Type.ToString();
                 var getMethod = GetTableEntityGetMethod(typeName);
 
                 sourceTextBuilder.AppendLine($$"""
-                            item.{{property.Name}} = entity.{{getMethod}}(nameof({{sourceType.Name}}.{{property.Name}}));
+                            item.{{property.Name}} = entity.{{getMethod}}(nameof({{sourceSymbol.Name}}.{{property.Name}}));
                     """);
             }
 
@@ -184,52 +200,35 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             adapterSymbol.Locations.FirstOrDefault(), adapterSymbol.ToDisplayString()));
     }
 
-    private static bool TryGetSchemaPropertyFromAttribute(GeneratorExecutionContext context,
-        INamedTypeSymbol adapterSymbol, ImmutableArray<IPropertySymbol> sourcePropertiesSymbols,
-        ImmutableArray<AttributeData> attributes, string attributeName, out IPropertySymbol? sourcePropertySymbol,
-        out bool ignoreSourceProperty)
+    private static IPropertySymbol? GetSchemaPropertyFromAttribute(INamedTypeSymbol adapterSymbol,
+        ITypeSymbol sourceTypeSymbol, string attributeName, out bool ignoreSourceProperty)
     {
-        sourcePropertySymbol = default!;
-        // TODO: Get default value from attribute declaration
-        ignoreSourceProperty = true;
+        AttributeData? attribute = adapterSymbol.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
 
-        AttributeData? attribute = attributes.FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
+        ignoreSourceProperty =
+            attribute?.NamedArguments.FirstOrDefault(n => n.Key == IgnoreSourcePropertyAttributeNamedArgument)
+                .Value.Value is not (bool or true);
 
-        if (attribute is null)
-        {
-            context.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.PartitionKeyAttributeNotFound,
-                adapterSymbol.Locations.FirstOrDefault(), adapterSymbol.ToDisplayString()));
-
-            return false;
-        }
-
-        if (attribute.NamedArguments.FirstOrDefault(a => a.Key == IgnoreSourcePropertyAttributeNamedArgument)
-                .Value.Value is bool ignoreSourcePropertyValue)
-            ignoreSourceProperty = ignoreSourcePropertyValue;
-
-        return TryGetPropertyFromAttribute(context, adapterSymbol, sourcePropertiesSymbols, attribute,
-            out sourcePropertySymbol);
+        return attribute is not null ? GetPropertyFromAttribute(sourceTypeSymbol, attribute) : null;
     }
 
-    private static bool TryGetPropertyFromAttribute(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol,
-        ImmutableArray<IPropertySymbol> sourcePropertiesSymbols, AttributeData propertyAttribute,
-        out IPropertySymbol? sourcePropertySymbol)
+    private static IPropertySymbol? GetPropertyFromAttribute(INamedTypeSymbol adapterSymbol,
+        ITypeSymbol sourceTypeSymbol, string attributeName)
     {
-        // TODO: Validate PropertyAttributeBase type
+        AttributeData? attribute = adapterSymbol.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
 
-        var propertyName = (string)propertyAttribute.ConstructorArguments[0].Value!;
+        return attribute is not null ? GetPropertyFromAttribute(sourceTypeSymbol, attribute) : null;
+    }
 
-        sourcePropertySymbol = sourcePropertiesSymbols.FirstOrDefault(p => p.Name == propertyName);
+    private static IPropertySymbol? GetPropertyFromAttribute(ITypeSymbol sourceTypeSymbol, AttributeData attribute)
+    {
+        // TODO: Validate PropertyAttributeBase base type 
 
-        if (sourcePropertySymbol is null)
-        {
-            // TODO: Check multiple locations
-            context.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.SourcePropertyNotFound,
-                propertyAttribute.AttributeClass!.Locations.FirstOrDefault(), adapterSymbol.ToDisplayString(),
-                propertyName));
-        }
+        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
 
-        return true;
+        return sourceTypeSymbol.GetInstancePublicProperties().FirstOrDefault(p => p.Name == propertyName);
     }
 
     // TODO: Auto convert unsupported types

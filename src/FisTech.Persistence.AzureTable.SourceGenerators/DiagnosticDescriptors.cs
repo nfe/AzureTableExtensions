@@ -48,22 +48,12 @@ internal static class DiagnosticDescriptors
         "Adapter class '{0}' must have to be partial", 
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor PartitionKeyAttributeNotFound = new("AZTBGEN005",
-        "Adapter class does not have a PartitionKey attribute",
-        "Adapter class '{0}' does not have a PartitionKeyAttribute", 
+    public static readonly DiagnosticDescriptor SourcePropertyNotFound = new("AZTBGEN005",
+        "Adapter class property not found for an attribute",
+        "Adapter class '{0}' property not found for '{1}' attribute",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor RowKeyAttributeNotFound = new("AZTBGEN006",
-        "Adapter class does not have a RowKey attribute", 
-        "Adapter class '{0}' does not have a RowKeyAttribute",
-        Categories.Usage, DiagnosticSeverity.Error, true);
-
-    public static readonly DiagnosticDescriptor SourcePropertyNotFound = new("AZTBGEN007",
-        "Adapter class source property does not exists on source type",
-        "Adapter class '{0}' does not have '{1}' property",
-        Categories.Usage, DiagnosticSeverity.Error, true);
-
-    public static readonly DiagnosticDescriptor InvalidSourcePropertyType = new("AZTBGEN008",
+    public static readonly DiagnosticDescriptor InvalidSourcePropertyType = new("AZTBGEN006",
         "Adapter class source property invalid type",
         "Adapter class '{0}' property '{1}' should be of '{2}' type instead '{3}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
