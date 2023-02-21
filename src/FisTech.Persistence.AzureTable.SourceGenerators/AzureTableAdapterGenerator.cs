@@ -10,21 +10,14 @@ public class AzureTableAdapterGenerator : ISourceGenerator
     private const string EntityInterfaceName = "ITableEntity";
     private const string EntityTypeName = "TableEntity";
 
-    private const string AdapterNamespace = "FisTech.Persistence.AzureTable";
-    private const string AdapterInterfaceName = "IAzureTableAdapter";
-    private const string AdapterBaseTypeName = "AzureTableAdapterBase";
-
-    private const string PartitionKeyAttributeName = "PartitionKeyAttribute";
-    private const string RowKeyAttributeName = "RowKeyAttribute";
-
-    private const string IgnoreSourcePropertyAttributeNamedArgument = "IgnoreSourceProperty";
-
     public void Initialize(GeneratorInitializationContext context) { }
 
     public void Execute(GeneratorExecutionContext context)
     {
+        var adapterBaseTypeName = typeof(AzureTableAdapterBase<>).GetNameWithoutArity();
+        
         foreach (INamedTypeSymbol? adapter in context.Compilation.Assembly.GlobalNamespace.DescendantTypeMembers(t =>
-            t.BaseType is { Name: AdapterBaseTypeName, IsGenericType: true, Arity: 1 }))
+            t.BaseType?.Name == adapterBaseTypeName && t.BaseType.IsGenericType && t.BaseType.Arity == 1))
             GenerateAdapter(context, adapter);
     }
 
@@ -36,20 +29,20 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         ITypeSymbol sourceSymbol = adapterSymbol.BaseType!.TypeArguments[0];
 
         IPropertySymbol? partitionKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            PartitionKeyAttributeName, out var ignorePartitionKeySourceProperty);
+            nameof(PartitionKeyAttribute), out var ignorePartitionKeySourceProperty);
 
         if (partitionKeyProperty is null)
         {
-            ReportSourcePropertyNotFound(PartitionKeyAttributeName);
+            ReportSourcePropertyNotFound(nameof(PartitionKeyAttribute));
             return;
         }
 
         IPropertySymbol? rowKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            RowKeyAttributeName, out var ignoreRowKeySourceProperty);
+            nameof(RowKeyAttribute), out var ignoreRowKeySourceProperty);
 
         if (rowKeyProperty is null)
         {
-            ReportSourcePropertyNotFound(RowKeyAttributeName);
+            ReportSourcePropertyNotFound(nameof(RowKeyAttribute));
             return;
         }
 
@@ -60,7 +53,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         if (ignoreRowKeySourceProperty)
             ignoredProperties.Add(rowKeyProperty);
-        
+
         // TODO: Check IgnoreAttribute
 
         ImmutableArray<IPropertySymbol> sourceProperties = sourceSymbol.GetInstancePublicProperties()
@@ -89,7 +82,9 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         {
             var usingStatements = new HashSet<string>(StringComparer.Ordinal)
             {
-                EntityTypeNamespace, AdapterNamespace, sourceSymbol.ContainingNamespace.ToDisplayString()
+                EntityTypeNamespace,
+                typeof(IAzureTableAdapter<>).Namespace,
+                sourceSymbol.ContainingNamespace.ToDisplayString()
             };
 
             foreach (var statement in usingStatements.OrderBy(s => s))
@@ -100,7 +95,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             
             namespace {{adapterSymbol.ContainingNamespace.ToDisplayString()}};
             
-            public partial class {{adapterSymbol.Name}} : {{AdapterInterfaceName}}<{{sourceSymbol.Name}}>
+            public partial class {{adapterSymbol.Name}} : {{typeof(IAzureTableAdapter<>).GetNameWithoutArity()}}<{{sourceSymbol.Name}}>
             {
             """);
 
@@ -207,7 +202,8 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             .FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
 
         ignoreSourceProperty =
-            attribute?.NamedArguments.FirstOrDefault(n => n.Key == IgnoreSourcePropertyAttributeNamedArgument)
+            attribute?.NamedArguments
+                .FirstOrDefault(n => n.Key == nameof(SchemaPropertyAttributeBase.IgnoreSourceProperty))
                 .Value.Value is not (bool or true);
 
         return attribute is not null ? GetPropertyFromAttribute(sourceTypeSymbol, attribute) : null;
