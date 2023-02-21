@@ -1,15 +1,11 @@
-﻿using System.Collections.Immutable;
+﻿using Azure.Data.Tables;
+using System.Collections.Immutable;
 
 namespace FisTech.Persistence.AzureTable.SourceGenerators;
 
 [Generator]
 public class AzureTableAdapterGenerator : ISourceGenerator
 {
-    // TODO: Use nameof references instead of string literals
-    private const string EntityTypeNamespace = "Azure.Data.Tables";
-    private const string EntityInterfaceName = "ITableEntity";
-    private const string EntityTypeName = "TableEntity";
-
     public void Initialize(GeneratorInitializationContext context) { }
 
     public void Execute(GeneratorExecutionContext context)
@@ -82,7 +78,8 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         {
             var usingStatements = new HashSet<string>(StringComparer.Ordinal)
             {
-                EntityTypeNamespace,
+                typeof(ITableEntity).Namespace,
+                typeof(TableEntity).Namespace,
                 typeof(IAzureTableAdapter<>).Namespace,
                 sourceSymbol.ContainingNamespace.ToDisplayString()
             };
@@ -102,9 +99,9 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         void AppendItemToEntityAdaptMethod()
         {
             sourceTextBuilder.AppendLine($$"""
-                    public {{EntityInterfaceName}} Adapt({{sourceSymbol.Name}} item)
+                    public {{nameof(ITableEntity)}} Adapt({{sourceSymbol.Name}} item)
                     {
-                        var entity = new {{EntityTypeName}}(item.{{partitionKeyProperty.Name}}, item.{{rowKeyProperty.Name}});
+                        var entity = new {{nameof(TableEntity)}}(item.{{partitionKeyProperty.Name}}, item.{{rowKeyProperty.Name}});
                 """);
 
             foreach (IPropertySymbol property in sourceProperties)
@@ -124,7 +121,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         void AppendEntityToItemAdaptMethod()
         {
             sourceTextBuilder.AppendLine($$"""
-                    public {{sourceSymbol.Name}} Adapt({{EntityTypeName}} entity)
+                    public {{sourceSymbol.Name}} Adapt({{nameof(TableEntity)}} entity)
                     {
                         var item = new {{sourceSymbol.Name}}();
                 """);
