@@ -249,6 +249,40 @@ public class AzureTableAdapterGeneratorTests
          await test.RunAsync();
      }
 
+     [Fact]
+     public async Task Generator_NonPartialAdapterClass_ReturnsDiagnosticErrorAZTBGEN004()
+     {
+         const string adapterSource = $$"""
+             using FisTech.Persistence.AzureTable;
+             using TestNamespace.Models;
+
+             namespace TestNamespace.Adapters;
+
+             [PartitionKey(nameof(TestModel.Country))]
+             [RowKey(nameof(TestModel.State))]
+             public class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+             """;
+
+         var test = new VerifyCS.Test
+         {
+             TestState =
+             {
+                 AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
+                 Sources = { SimpleModelSource, adapterSource },
+                 ExpectedDiagnostics =
+                 {
+                     DiagnosticResult.CompilerError("AZTBGEN004")
+                         .WithSeverity(DiagnosticSeverity.Error)
+                         .WithLocation("/0/Test1.cs", 8, 14)
+                         .WithMessage(
+                             $"Adapter class 'TestNamespace.Adapters.TestModelAdapter' must have to be partial")
+                 }
+             }
+         };
+
+         await test.RunAsync();
+     }
+
     [Theory]
     [InlineData("[RowKey(nameof(TestModel.State))]", "PartitionKeyAttribute")]
     [InlineData("[PartitionKey(nameof(TestModel.Country))]", "RowKeyAttribute")]
