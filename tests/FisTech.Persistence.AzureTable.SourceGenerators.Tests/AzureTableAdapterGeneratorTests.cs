@@ -148,7 +148,7 @@ public class AzureTableAdapterGeneratorTests
 //     [InlineData("private protected")]
 //     [InlineData("protected")]
 //     [InlineData("protected internal")]
-//     public async Task Generator_InvalidClassAccessibility_ReturnsDiagnosticErrorAZTBGEN001(string accessModifiers)
+//     public async Task Generator_InvalidAdapterClassAccessibility_ReturnsDiagnosticErrorAZTBGEN001(string accessModifiers)
 //     {
 //         var adapterSource = $$"""
 //             using FisTech.Persistence.AzureTable;
@@ -180,12 +180,46 @@ public class AzureTableAdapterGeneratorTests
 //
 //         await test.RunAsync();
 //     }
-    
+
+     [Fact]
+     public async Task Generator_AbstractAdapterClass_ReturnsDiagnosticErrorAZTBGEN002()
+     {
+         var adapterSource = $$"""
+             using FisTech.Persistence.AzureTable;
+             using TestNamespace.Models;
+
+             namespace TestNamespace.Adapters;
+
+             [PartitionKey(nameof(TestModel.Country))]
+             [RowKey(nameof(TestModel.State))]
+             public abstract partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+             """;
+
+         var test = new VerifyCS.Test
+         {
+             TestState =
+             {
+                 AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
+                 Sources = { SimpleModelSource, adapterSource },
+                 ExpectedDiagnostics =
+                 {
+                     DiagnosticResult.CompilerError("AZTBGEN002")
+                         .WithSeverity(DiagnosticSeverity.Error)
+                         .WithLocation("/0/Test1.cs", 8, 31)
+                         .WithMessage(
+                             $"Adapter class 'TestNamespace.Adapters.TestModelAdapter' should not be abstract")
+                 }
+             }
+         };
+
+         await test.RunAsync();
+     }
+
     [Theory]
     [InlineData("[RowKey(nameof(TestModel.State))]", "PartitionKeyAttribute")]
     [InlineData("[PartitionKey(nameof(TestModel.Country))]", "RowKeyAttribute")]
     [InlineData("[PartitionKey(\"MyProperty\")]", "PartitionKeyAttribute")]
-    public async Task Generator_InvalidPropertyAttribute_ReturnsDiagnosticErrorAZTBGEN005(string attributeSource, string attributeName)
+    public async Task Generator_InvalidAdapterClassPropertyAttribute_ReturnsDiagnosticErrorAZTBGEN005(string attributeSource, string attributeName)
     {
         var adapterSource = $$"""
             using FisTech.Persistence.AzureTable;
