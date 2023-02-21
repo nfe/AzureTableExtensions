@@ -184,7 +184,7 @@ public class AzureTableAdapterGeneratorTests
      [Fact]
      public async Task Generator_AbstractAdapterClass_ReturnsDiagnosticErrorAZTBGEN002()
      {
-         var adapterSource = $$"""
+         const string adapterSource = $$"""
              using FisTech.Persistence.AzureTable;
              using TestNamespace.Models;
 
@@ -208,6 +208,40 @@ public class AzureTableAdapterGeneratorTests
                          .WithLocation("/0/Test1.cs", 8, 31)
                          .WithMessage(
                              $"Adapter class 'TestNamespace.Adapters.TestModelAdapter' should not be abstract")
+                 }
+             }
+         };
+
+         await test.RunAsync();
+     }
+
+     [Fact]
+     public async Task Generator_GenericAdapterClass_ReturnsDiagnosticErrorAZTBGEN003()
+     {
+         const string adapterSource = $$"""
+             using FisTech.Persistence.AzureTable;
+             using TestNamespace.Models;
+
+             namespace TestNamespace.Adapters;
+
+             [PartitionKey(nameof(TestModel.Country))]
+             [RowKey(nameof(TestModel.State))]
+             public partial class TestModelAdapter<T> : AzureTableAdapterBase<TestModel> { }
+             """;
+
+         var test = new VerifyCS.Test
+         {
+             TestState =
+             {
+                 AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
+                 Sources = { SimpleModelSource, adapterSource },
+                 ExpectedDiagnostics =
+                 {
+                     DiagnosticResult.CompilerError("AZTBGEN003")
+                         .WithSeverity(DiagnosticSeverity.Error)
+                         .WithLocation("/0/Test1.cs", 8, 22)
+                         .WithMessage(
+                             $"Adapter class 'TestNamespace.Adapters.TestModelAdapter<T>' does not support generic types")
                  }
              }
          };
