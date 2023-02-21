@@ -1,4 +1,6 @@
 ﻿using Azure.Data.Tables;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.Text;
 using System.Text;
 using VerifyCS =
@@ -9,23 +11,23 @@ namespace FisTech.Persistence.AzureTable.SourceGenerators.Tests;
 
 public class AzureTableAdapterGeneratorTests
 {
+    private const string SimpleModelSource = """
+        namespace TestNamespace.Models;
+
+        public class TestModel
+        {
+            public string State { get; set; }
+
+            public string Country { get; set; }
+        }
+        """;
+    
     private static readonly string s_entityAssemblyLocation = typeof(ITableEntity).Assembly.Location;
     private static readonly string s_adapterAssemblyLocation = typeof(IAzureTableAdapter<>).Assembly.Location;
 
     [Fact]
     public async Task Generator_SimpleModel_ReturnsAdapter()
     {
-        const string modelSource = """
-            namespace TestNamespace.Models;
-
-            public class TestModel
-            {
-                public string State { get; set; }
-
-                public string Country { get; set; }
-            }
-            """;
-
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -69,7 +71,7 @@ public class AzureTableAdapterGeneratorTests
             TestState =
             {
                 AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
-                Sources = { modelSource, adapterSource },
+                Sources = { SimpleModelSource, adapterSource },
                 GeneratedSources =
                 {
                     (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
@@ -84,17 +86,6 @@ public class AzureTableAdapterGeneratorTests
     [Fact]
     public async Task Generator_AddSchemaSourceProperties_ReturnsAdapter()
     {
-        const string modelSource = """
-            namespace TestNamespace.Models;
-
-            public class TestModel
-            {
-                public string State { get; set; }
-
-                public string Country { get; set; }
-            }
-            """;
-
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -140,11 +131,61 @@ public class AzureTableAdapterGeneratorTests
             TestState =
             {
                 AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
-                Sources = { modelSource, adapterSource },
+                Sources = { SimpleModelSource, adapterSource },
                 GeneratedSources =
                 {
                     (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
                         SourceText.From(expected, Encoding.UTF8))
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
+    
+    [Theory]
+    [InlineData("""
+        using FisTech.Persistence.AzureTable;
+        using TestNamespace.Models;
+
+        namespace TestNamespace.Adapters;
+
+        [RowKey(nameof(TestModel.State))]
+        public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+        """, "PartitionKeyAttribute")]
+    [InlineData("""
+        using FisTech.Persistence.AzureTable;
+        using TestNamespace.Models;
+
+        namespace TestNamespace.Adapters;
+
+        [PartitionKey(nameof(TestModel.Country))]
+        public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+        """, "RowKeyAttribute")]
+    [InlineData("""
+        using FisTech.Persistence.AzureTable;
+        using TestNamespace.Models;
+
+        namespace TestNamespace.Adapters;
+
+        [PartitionKey("MyProperty")]
+        public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+        """, "PartitionKeyAttribute")]
+    public async Task Generator_InvalidPropertyAttribute_ReturnsDiagnosticErrorAZTBGEN005(string adapterSource, string attributeName)
+    {
+        var test = new VerifyCS.Test
+        {
+            TestState =
+            {
+                AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
+                Sources = { SimpleModelSource, adapterSource },
+                ExpectedDiagnostics =
+                {
+                    DiagnosticResult.CompilerError("AZTBGEN005")
+                        .WithSeverity(DiagnosticSeverity.Error)
+                        .WithLocation("/0/Test1.cs", 7, 22)
+                        .WithMessage(
+                            $"Adapter class 'TestNamespace.Adapters.TestModelAdapter' property not found for '{attributeName}' attribute")
                 }
             }
         };
