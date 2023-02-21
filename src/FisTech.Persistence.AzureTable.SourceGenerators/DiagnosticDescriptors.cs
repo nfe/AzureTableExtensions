@@ -30,7 +30,7 @@ internal static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor InvalidClassAccessibility = new("AZTBGEN001",
         "Adapter class invalid accessibility modifier", 
-        "Adapter class '{0}' should be public", 
+        "Adapter class '{0}' should be public or internal", 
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     public static readonly DiagnosticDescriptor InvalidAbstractClass = new("AZTBGEN002",
