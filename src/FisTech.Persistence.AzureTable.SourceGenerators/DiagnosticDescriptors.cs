@@ -48,14 +48,14 @@ internal static class DiagnosticDescriptors
         "Adapter class '{0}' must have to be partial", 
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor SourcePropertyNotFound = new("AZTBGEN005",
+    public static readonly DiagnosticDescriptor PropertyNotFound = new("AZTBGEN005",
         "Adapter class property not found for an attribute",
         "Adapter class '{0}' property not found for '{1}' attribute",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor InvalidSourcePropertyType = new("AZTBGEN006",
-        "Adapter class source property invalid type",
-        "Adapter class '{0}' property '{1}' should be of '{2}' type instead '{3}'",
+    public static readonly DiagnosticDescriptor UnsupportedPropertyType = new("AZTBGEN006",
+        "Adapter class unsupported property type",
+        "Adapter class '{0}' property '{1}' does not support type '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     // @formatter:on

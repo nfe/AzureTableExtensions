@@ -2,8 +2,6 @@
 
 public class AzureTableAdapterBase<TSource> where TSource : class, new()
 {
-    // TODO: PartitionKey property mapping
-    // TODO: RowKey property mapping
     // TODO: ETag property mapping
     // TODO: Timestamp property mapping
 
@@ -11,7 +9,7 @@ public class AzureTableAdapterBase<TSource> where TSource : class, new()
     // TODO: RowKey property value conversion
     // TODO: ETag property value conversion
     // TODO: Timestamp property value conversion
-
+    
     // TODO: Include/Ignore properties
     // TODO: Properties renaming
     // TODO: Properties custom converters
@@ -19,4 +17,6 @@ public class AzureTableAdapterBase<TSource> where TSource : class, new()
     // TODO: Auto map required schema properties
 
     // TODO: Auto convert unsupported types
+    
+    // TODO: Nested types support
 }

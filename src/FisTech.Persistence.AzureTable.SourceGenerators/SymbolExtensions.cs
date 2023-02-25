@@ -34,6 +34,9 @@ internal static class SymbolExtensions
         return sourceText.Contains(partialClassDeclaration.AsSpan(), StringComparison.Ordinal);
     }
 
+    public static bool IsNullableTypeKind(this INamedTypeSymbol namedTypeSymbol, TypeKind typeKind) =>
+        namedTypeSymbol.OriginalDefinition.Name == "Nullable" && namedTypeSymbol.TypeArguments[0].TypeKind == typeKind;
+
     public static IEnumerable<IPropertySymbol> GetInstancePublicProperties(this ITypeSymbol typeSymbol) => typeSymbol
         .GetMembers()
         .Where(m => m is IPropertySymbol { DeclaredAccessibility: Accessibility.Public, IsStatic: false })

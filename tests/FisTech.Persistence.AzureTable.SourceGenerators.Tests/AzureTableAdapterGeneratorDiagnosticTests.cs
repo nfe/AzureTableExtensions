@@ -68,7 +68,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.EntityAssemblyLocation, _fixture.AdapterAssemblyLocation },
+                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
                 Sources = { _fixture.SimpleModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
@@ -102,7 +102,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.EntityAssemblyLocation, _fixture.AdapterAssemblyLocation },
+                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
                 Sources = { _fixture.SimpleModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
@@ -136,7 +136,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.EntityAssemblyLocation, _fixture.AdapterAssemblyLocation },
+                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
                 Sources = { _fixture.SimpleModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
@@ -173,7 +173,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.EntityAssemblyLocation, _fixture.AdapterAssemblyLocation },
+                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
                 Sources = { _fixture.SimpleModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
