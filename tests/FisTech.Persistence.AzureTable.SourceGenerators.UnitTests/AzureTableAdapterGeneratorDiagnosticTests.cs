@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using Azure.Data.Tables;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using VerifyCS =
     FisTech.Persistence.AzureTable.SourceGenerators.UnitTests.CSharpSourceGeneratorVerifier<
@@ -6,12 +7,22 @@ using VerifyCS =
 
 namespace FisTech.Persistence.AzureTable.SourceGenerators.UnitTests;
 
-public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTableAdapterFixture>
+public class AzureTableAdapterGeneratorDiagnosticTests
 {
-    private readonly AzureTableAdapterFixture _fixture;
+    private const string ModelSource = """
+        namespace TestNamespace.Models;
 
-    public AzureTableAdapterGeneratorDiagnosticTests(AzureTableAdapterFixture fixture) => _fixture = fixture;
+        public class TestModel
+        {
+            public string State { get; set; }
 
+            public string Country { get; set; }
+        }
+        """;
+
+    private static readonly string s_azureSdkReference = typeof(ITableEntity).Assembly.Location;
+    private static readonly string s_adapterReference = typeof(IAzureTableAdapter<>).Assembly.Location;
+    
     // TODO: Fix Generator_InvalidAdapterClassAccessibility_ReturnsDiagnosticErrorAZTBGEN001
     //     [Theory]
     //     [InlineData("private")]
@@ -36,7 +47,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
     //             TestState =
     //             {
     //                 AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
-    //                 Sources = { SimpleModelSource, adapterSource },
+    //                 Sources = { ModelSource, adapterSource },
     //                 ExpectedDiagnostics =
     //                 {
     //                     DiagnosticResult.CompilerError("AZTBGEN001")
@@ -69,8 +80,8 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
-                Sources = { _fixture.SimpleModelSource, adapterSource },
+                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
+                Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
                     DiagnosticResult.CompilerError("AZTBGEN002")
@@ -103,8 +114,8 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
-                Sources = { _fixture.SimpleModelSource, adapterSource },
+                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
+                Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
                     DiagnosticResult.CompilerError("AZTBGEN003")
@@ -137,8 +148,8 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
-                Sources = { _fixture.SimpleModelSource, adapterSource },
+                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
+                Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
                     DiagnosticResult.CompilerError("AZTBGEN004")
@@ -174,8 +185,8 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
-                Sources = { _fixture.SimpleModelSource, adapterSource },
+                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
+                Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
                     DiagnosticResult.CompilerError("AZTBGEN005")

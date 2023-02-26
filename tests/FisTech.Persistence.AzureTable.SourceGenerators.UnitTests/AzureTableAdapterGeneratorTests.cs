@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis.Text;
+﻿using Azure.Data.Tables;
+using Microsoft.CodeAnalysis.Text;
 using System.Text;
 using VerifyCS =
     FisTech.Persistence.AzureTable.SourceGenerators.UnitTests.CSharpSourceGeneratorVerifier<
@@ -6,15 +7,26 @@ using VerifyCS =
 
 namespace FisTech.Persistence.AzureTable.SourceGenerators.UnitTests;
 
-public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFixture>
+public class AzureTableAdapterGeneratorTests
 {
-    private readonly AzureTableAdapterFixture _fixture;
-
-    public AzureTableAdapterGeneratorTests(AzureTableAdapterFixture fixture) => _fixture = fixture;
+    private static readonly string s_azureSdkReference = typeof(ITableEntity).Assembly.Location;
+    private static readonly string s_adapterReference = typeof(IAzureTableAdapter<>).Assembly.Location;
+    private static readonly string s_binaryDataReference = typeof(BinaryData).Assembly.Location;
 
     [Fact]
     public async Task Generator_SimpleModel_ReturnsAdapter()
     {
+        const string modelSource = """
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public string State { get; set; }
+
+                public string Country { get; set; }
+            }
+            """;
+        
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -49,8 +61,8 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
-                Sources = { _fixture.SimpleModelSource, adapterSource },
+                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
+                Sources = { modelSource, adapterSource },
                 GeneratedSources =
                 {
                     (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
@@ -65,6 +77,17 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
     [Fact]
     public async Task Generator_AddSchemaSourceProperties_ReturnsAdapter()
     {
+        const string modelSource = """
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public string State { get; set; }
+
+                public string Country { get; set; }
+            }
+            """;
+        
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -103,8 +126,8 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
-                Sources = { _fixture.SimpleModelSource, adapterSource },
+                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
+                Sources = { modelSource, adapterSource },
                 GeneratedSources =
                 {
                     (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
@@ -119,6 +142,77 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
     [Fact]
     public async Task Generator_AllSupportedTypesModel_ReturnsAdapter()
     {
+        const string modelSource = """
+            using System;
+
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public char MyChar { get; set; } = 'A';
+
+                public char? MyNullableChar { get; set; }
+
+                public string MyString { get; set; } = "Hello World";
+
+                public string? MyNullableString { get; set; }
+
+                public bool MyBool { get; set; } = true;
+
+                public bool? MyNullableBool { get; set; }
+
+                public byte MyByte { get; set; } = byte.MaxValue;
+
+                public byte? MyNullableByte { get; set; }
+
+                public short MyShort { get; set; } = short.MaxValue;
+
+                public short? MyNullableShort { get; set; }
+
+                public int MyInt { get; set; } = int.MaxValue;
+
+                public int? MyNullableInt { get; set; }
+
+                public long MyLong { get; set; } = long.MaxValue;
+
+                public long? MyNullableLong { get; set; }
+
+                public float MyFloat { get; set; } = float.MaxValue;
+
+                public float? MyNullableFloat { get; set; }
+
+                public double MyDouble { get; set; } = double.MaxValue;
+
+                public double? MyNullableDouble { get; set; }
+
+                // TODO: public decimal MyDecimal { get; set; } = decimal.MaxValue;
+
+                // TODO: public decimal? MyNullableDecimal { get; set; }
+
+                // TODO: public DateTime MyDateTime { get; set; } = DateTime.Now;
+
+                // TODO: public DateTime? MyNullableDateTime { get; set; }
+
+                public DateTimeOffset MyDateTimeOffset { get; set; } = DateTime.UtcNow;
+
+                public DateTimeOffset? MyNullableDateTimeOffset { get; set; }
+
+                public Guid MyGuid { get; set; } = Guid.NewGuid();
+
+                public Guid? MyNullableGuid { get; set; }
+
+                public MyEnum MyEnum { get; set; } = MyEnum.ValueB;
+
+                public MyEnum? MyNullableEnum { get; set; }
+
+                public byte[] MyByteArray { get; set; } = { 1, 2, 3, 4, 5 };
+
+                public BinaryData MyBinaryData { get; set; } = new(new byte[] { 9, 8, 7, 6, 5});
+            }
+
+            public enum MyEnum { ValueA, ValueB, ValueC }
+            """;
+        
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -207,11 +301,11 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
             {
                 AdditionalReferences =
                 {
-                    _fixture.AzureSdkAssemblyLocation,
-                    _fixture.AdapterAssemblyLocation,
-                    _fixture.BinaryDataAssemblyLocation
+                    s_azureSdkReference,
+                    s_adapterReference,
+                    s_binaryDataReference
                 },
-                Sources = { _fixture.AllTypesModelSource, adapterSource },
+                Sources = { modelSource, adapterSource },
                 GeneratedSources =
                 {
                     (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
