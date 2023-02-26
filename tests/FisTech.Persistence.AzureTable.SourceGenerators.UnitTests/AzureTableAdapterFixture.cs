@@ -7,7 +7,7 @@ public class AzureTableAdapterFixture
     public string AzureSdkAssemblyLocation { get; } = typeof(ITableEntity).Assembly.Location;
 
     public string AdapterAssemblyLocation { get; } = typeof(IAzureTableAdapter<>).Assembly.Location;
-    
+
     public string BinaryDataAssemblyLocation { get; } = typeof(BinaryData).Assembly.Location;
 
     public string SimpleModelSource { get; } = """
