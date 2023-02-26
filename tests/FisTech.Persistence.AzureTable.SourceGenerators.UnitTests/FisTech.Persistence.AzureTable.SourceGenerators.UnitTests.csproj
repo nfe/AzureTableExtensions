@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <!-- TODO: Add olders framework targets -->
-        <TargetFrameworks>net5.0;net6.0;net7.0</TargetFrameworks>
+        <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
 
         <NoWarn>$(NoWarn);NETSDK1138;CA1707</NoWarn>
         <IsPackable>false</IsPackable>

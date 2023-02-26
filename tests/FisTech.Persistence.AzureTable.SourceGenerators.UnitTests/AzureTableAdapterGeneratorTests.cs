@@ -1,18 +1,10 @@
-﻿using Azure.Data.Tables;
-using Microsoft.CodeAnalysis.Text;
+﻿using Microsoft.CodeAnalysis.Text;
 using System.Text;
-using VerifyCS =
-    FisTech.Persistence.AzureTable.SourceGenerators.UnitTests.CSharpSourceGeneratorVerifier<
-        FisTech.Persistence.AzureTable.SourceGenerators.AzureTableAdapterGenerator>;
 
 namespace FisTech.Persistence.AzureTable.SourceGenerators.UnitTests;
 
 public class AzureTableAdapterGeneratorTests
 {
-    private static readonly string s_azureSdkReference = typeof(ITableEntity).Assembly.Location;
-    private static readonly string s_adapterReference = typeof(IAzureTableAdapter<>).Assembly.Location;
-    private static readonly string s_binaryDataReference = typeof(BinaryData).Assembly.Location;
-
     [Fact]
     public async Task Generator_SimpleModel_ReturnsAdapter()
     {
@@ -26,7 +18,7 @@ public class AzureTableAdapterGeneratorTests
                 public string Country { get; set; }
             }
             """;
-        
+
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -57,11 +49,10 @@ public class AzureTableAdapterGeneratorTests
             }
             """;
 
-        var test = new VerifyCS.Test
+        var test = new AzureTableAdapterGeneratorTest
         {
             TestState =
             {
-                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
                 Sources = { modelSource, adapterSource },
                 GeneratedSources =
                 {
@@ -87,7 +78,7 @@ public class AzureTableAdapterGeneratorTests
                 public string Country { get; set; }
             }
             """;
-        
+
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -122,11 +113,10 @@ public class AzureTableAdapterGeneratorTests
             }
             """;
 
-        var test = new VerifyCS.Test
+        var test = new AzureTableAdapterGeneratorTest
         {
             TestState =
             {
-                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
                 Sources = { modelSource, adapterSource },
                 GeneratedSources =
                 {
@@ -212,7 +202,7 @@ public class AzureTableAdapterGeneratorTests
 
             public enum MyEnum { ValueA, ValueB, ValueC }
             """;
-        
+
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -295,16 +285,10 @@ public class AzureTableAdapterGeneratorTests
             }
             """;
 
-        var test = new VerifyCS.Test
+        var test = new AzureTableAdapterGeneratorTest
         {
             TestState =
             {
-                AdditionalReferences =
-                {
-                    s_azureSdkReference,
-                    s_adapterReference,
-                    s_binaryDataReference
-                },
                 Sources = { modelSource, adapterSource },
                 GeneratedSources =
                 {

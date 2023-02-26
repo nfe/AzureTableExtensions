@@ -1,9 +1,5 @@
-﻿using Azure.Data.Tables;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
-using VerifyCS =
-    FisTech.Persistence.AzureTable.SourceGenerators.UnitTests.CSharpSourceGeneratorVerifier<
-        FisTech.Persistence.AzureTable.SourceGenerators.AzureTableAdapterGenerator>;
 
 namespace FisTech.Persistence.AzureTable.SourceGenerators.UnitTests;
 
@@ -20,9 +16,6 @@ public class AzureTableAdapterGeneratorDiagnosticTests
         }
         """;
 
-    private static readonly string s_azureSdkReference = typeof(ITableEntity).Assembly.Location;
-    private static readonly string s_adapterReference = typeof(IAzureTableAdapter<>).Assembly.Location;
-    
     // TODO: Fix Generator_InvalidAdapterClassAccessibility_ReturnsDiagnosticErrorAZTBGEN001
     //     [Theory]
     //     [InlineData("private")]
@@ -42,11 +35,10 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     //             {{accessModifiers}} partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
     //             """;
     //
-    //         var test = new VerifyCS.Test
+    //         var test = new AzureTableAdapterGeneratorTest
     //         {
     //             TestState =
     //             {
-    //                 AdditionalReferences = { s_entityAssemblyLocation, s_adapterAssemblyLocation },
     //                 Sources = { ModelSource, adapterSource },
     //                 ExpectedDiagnostics =
     //                 {
@@ -76,11 +68,10 @@ public class AzureTableAdapterGeneratorDiagnosticTests
              public abstract partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
              """;
 
-        var test = new VerifyCS.Test
+        var test = new AzureTableAdapterGeneratorTest
         {
             TestState =
             {
-                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
@@ -110,11 +101,10 @@ public class AzureTableAdapterGeneratorDiagnosticTests
              public partial class TestModelAdapter<T> : AzureTableAdapterBase<TestModel> { }
              """;
 
-        var test = new VerifyCS.Test
+        var test = new AzureTableAdapterGeneratorTest
         {
             TestState =
             {
-                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
@@ -144,11 +134,10 @@ public class AzureTableAdapterGeneratorDiagnosticTests
              public class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
              """;
 
-        var test = new VerifyCS.Test
+        var test = new AzureTableAdapterGeneratorTest
         {
             TestState =
             {
-                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
@@ -181,11 +170,10 @@ public class AzureTableAdapterGeneratorDiagnosticTests
             public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
             """;
 
-        var test = new VerifyCS.Test
+        var test = new AzureTableAdapterGeneratorTest
         {
             TestState =
             {
-                AdditionalReferences = { s_azureSdkReference, s_adapterReference },
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
