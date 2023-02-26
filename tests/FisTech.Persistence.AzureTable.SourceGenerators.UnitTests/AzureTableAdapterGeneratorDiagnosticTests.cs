@@ -12,6 +12,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTabl
 
     public AzureTableAdapterGeneratorDiagnosticTests(AzureTableAdapterFixture fixture) => _fixture = fixture;
 
+    // TODO: Fix Generator_InvalidAdapterClassAccessibility_ReturnsDiagnosticErrorAZTBGEN001
     //     [Theory]
     //     [InlineData("private")]
     //     [InlineData("private protected")]

@@ -64,13 +64,13 @@ public class AzureTableAdapterFixture
 
             public double? MyNullableDouble { get; set; }
 
-            // public decimal MyDecimal { get; set; } = decimal.MaxValue;
+            // TODO: public decimal MyDecimal { get; set; } = decimal.MaxValue;
 
-            // public decimal? MyNullableDecimal { get; set; }
+            // TODO: public decimal? MyNullableDecimal { get; set; }
 
-            // public DateTime MyDateTime { get; set; } = DateTime.Now;
+            // TODO: public DateTime MyDateTime { get; set; } = DateTime.Now;
 
-            // public DateTime? MyNullableDateTime { get; set; }
+            // TODO: public DateTime? MyNullableDateTime { get; set; }
 
             public DateTimeOffset MyDateTimeOffset { get; set; } = DateTime.UtcNow;
 
