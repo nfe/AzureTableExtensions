@@ -129,9 +129,9 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
 
         await test.RunAsync();
     }
-    
+
     [Fact]
-    public async Task Generator_AllTypesModel_ReturnsAdapter()
+    public async Task Generator_AllSupportedTypesModel_ReturnsAdapter()
     {
         const string adapterSource = """
             using FisTech.Persistence.AzureTable;
@@ -181,6 +181,7 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
                     entity.Add(nameof(TestModel.MyEnum), (int)item.MyEnum);
                     entity.Add(nameof(TestModel.MyNullableEnum), (int?)item.MyNullableEnum);
                     entity.Add(nameof(TestModel.MyByteArray), item.MyByteArray);
+                    entity.Add(nameof(TestModel.MyBinaryData), item.MyBinaryData);
 
                     return entity;
                 }
@@ -213,6 +214,7 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
                     item.MyEnum = (TestNamespace.Models.MyEnum)entity.GetInt32(nameof(TestModel.MyEnum)).Value;
                     item.MyNullableEnum = (TestNamespace.Models.MyEnum?)entity.GetInt32(nameof(TestModel.MyNullableEnum));
                     item.MyByteArray = entity.GetBinary(nameof(TestModel.MyByteArray));
+                    item.MyBinaryData = entity.GetBinaryData(nameof(TestModel.MyBinaryData));
 
                     return item;
                 }
@@ -223,7 +225,12 @@ public class AzureTableAdapterGeneratorTests : IClassFixture<AzureTableAdapterFi
         {
             TestState =
             {
-                AdditionalReferences = { _fixture.AzureSdkAssemblyLocation, _fixture.AdapterAssemblyLocation },
+                AdditionalReferences =
+                {
+                    _fixture.AzureSdkAssemblyLocation,
+                    _fixture.AdapterAssemblyLocation,
+                    _fixture.BinaryDataAssemblyLocation
+                },
                 Sources = { _fixture.AllTypesModelSource, adapterSource },
                 GeneratedSources =
                 {

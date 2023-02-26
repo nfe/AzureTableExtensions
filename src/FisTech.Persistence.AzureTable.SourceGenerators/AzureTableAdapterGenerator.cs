@@ -153,8 +153,10 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 }
             }
             """);
+        
+        var sourceText = sourceTextBuilder.ToString();
 
-        context.AddSource($"{adapterSymbol.Name}.g.cs", SourceText.From(sourceTextBuilder.ToString(), Encoding.UTF8));
+        context.AddSource($"{adapterSymbol.Name}.g.cs", SourceText.From(sourceText, Encoding.UTF8));
 
         void ReportPropertyNotFound(string attributeName) => context.ReportDiagnostic(
             Diagnostic.Create(DiagnosticDescriptors.PropertyNotFound, adapterSymbol.Locations.FirstOrDefault(),
@@ -246,7 +248,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             "string" or "string?" or "bool" or "bool?" or "byte" or "byte?" or "short" or "short?" or "int" or "int?"
                 or "long" or "long?" or "float" or "float?" or "double" or "double?" or "System.DateTime"
                 or "System.DateTime?" or "System.DateTimeOffset" or "System.DateTimeOffset?" or "System.Guid"
-                or "System.Guid?" or "byte[]" or "BinaryData" => $"item.{propertyName}",
+                or "System.Guid?" or "byte[]" or "System.BinaryData" => $"item.{propertyName}",
             _ => null
         };
     }
@@ -286,7 +288,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             "System.Guid" => $"entity.GetGuid({property}).Value",
             "System.Guid?" => $"entity.GetGuid({property})",
             "byte[]" => $"entity.GetBinary({property})",
-            "BinaryData" => $"entity.GetBinaryData({property})",
+            "System.BinaryData" => $"entity.GetBinaryData({property})",
             _ => null
         };
     }

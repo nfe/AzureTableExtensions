@@ -7,6 +7,8 @@ public class AzureTableAdapterFixture
     public string AzureSdkAssemblyLocation { get; } = typeof(ITableEntity).Assembly.Location;
 
     public string AdapterAssemblyLocation { get; } = typeof(IAzureTableAdapter<>).Assembly.Location;
+    
+    public string BinaryDataAssemblyLocation { get; } = typeof(BinaryData).Assembly.Location;
 
     public string SimpleModelSource { get; } = """
         namespace TestNamespace.Models;
@@ -84,7 +86,7 @@ public class AzureTableAdapterFixture
 
             public byte[] MyByteArray { get; set; } = { 1, 2, 3, 4, 5 };
 
-            // public BinaryData MyBinaryData { get; set; } = new(new byte[] { 9, 8, 7, 6, 5});
+            public BinaryData MyBinaryData { get; set; } = new(new byte[] { 9, 8, 7, 6, 5});
         }
 
         public enum MyEnum { ValueA, ValueB, ValueC }
