@@ -1,4 +1,5 @@
-﻿using Azure.Data.Tables;
+﻿using Azure;
+using Azure.Data.Tables;
 using System.Collections.Immutable;
 
 namespace FisTech.Persistence.AzureTable.SourceGenerators;
@@ -33,6 +34,8 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             return;
         }
 
+        // TODO: Validate PartitionKey property type
+
         IPropertySymbol? rowKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
             nameof(RowKeyAttribute), out var ignoreRowKeySourceProperty);
 
@@ -42,6 +45,18 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             return;
         }
 
+        // TODO: Validate RowKey property type
+
+        IPropertySymbol? timestampProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
+            nameof(TimestampAttribute), out var ignoreTimestampSourceProperty);
+
+        // TODO: Validate Timestamp property type
+
+        IPropertySymbol? eTagProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
+            nameof(ETagAttribute), out var ignoreETagSourceProperty);
+
+        // TODO: Validate ETag property type
+
         var ignoredProperties = new HashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
 
         if (ignorePartitionKeySourceProperty)
@@ -50,15 +65,17 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         if (ignoreRowKeySourceProperty)
             ignoredProperties.Add(rowKeyProperty);
 
-        // TODO: Check IgnoreAttribute
+        if (timestampProperty is not null && ignoreTimestampSourceProperty)
+            ignoredProperties.Add(timestampProperty);
+
+        if (eTagProperty is not null && ignoreETagSourceProperty)
+            ignoredProperties.Add(eTagProperty);
 
         ImmutableArray<IPropertySymbol> sourceProperties = sourceSymbol.GetInstancePublicProperties()
             .Where(p => !ignoredProperties.Contains(p))
             .ToImmutableArray();
 
         var sourceTextBuilder = new StringBuilder();
-
-        // Using statements
 
         var usingStatements = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -67,10 +84,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             typeof(IAzureTableAdapter<>).Namespace,
             sourceSymbol.ContainingNamespace.ToDisplayString()
         };
-
-        foreach (var statement in usingStatements.OrderBy(s => s))
-            sourceTextBuilder.AppendLine($"using {statement};");
-
+        
         // Class declaration
 
         sourceTextBuilder.AppendLine($$"""
@@ -83,14 +97,17 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         // Item to entity adapt method
 
-        sourceTextBuilder.Append(
-            $$"""    public {{nameof(ITableEntity)}} Adapt({{sourceSymbol.Name}} item) => new {{nameof(TableEntity)}}(item.{{partitionKeyProperty.Name}}, item.{{rowKeyProperty.Name}})""");
+        sourceTextBuilder.Append($$"""    
+                public {{nameof(ITableEntity)}} Adapt({{sourceSymbol.Name}} item)
+                {
+                    var entity = new {{nameof(TableEntity)}}(item.{{partitionKeyProperty.Name}}, item.{{rowKeyProperty.Name}})
+            """);
 
         if (sourceProperties.Length == 0)
             sourceTextBuilder.AppendLine(";");
         else
         {
-            sourceTextBuilder.AppendLine("\r\n    {");
+            sourceTextBuilder.AppendLine("\r\n        {");
 
             foreach (IPropertySymbol property in sourceProperties)
             {
@@ -103,11 +120,37 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 }
 
                 sourceTextBuilder.AppendLine(
-                    $$"""        { nameof({{sourceSymbol.Name}}.{{property.Name}}), {{setMethod}} },""");
+                    $$"""            { nameof({{sourceSymbol.Name}}.{{property.Name}}), {{setMethod}} },""");
             }
 
-            sourceTextBuilder.AppendLine("    };");
+            sourceTextBuilder.AppendLine("        };");
         }
+
+        if (timestampProperty is not null)
+            // Apply default condition to avoid unnecessary serialization
+            sourceTextBuilder.AppendLine($$"""
+
+                        if (item.{{timestampProperty.Name}} != default)
+                            entity.Timestamp = item.{{timestampProperty.Name}};
+                """);
+
+        if (eTagProperty is not null)
+        {
+            usingStatements.Add(typeof(ETag).Namespace);
+            
+            // Apply default condition to avoid unnecessary serialization
+            sourceTextBuilder.AppendLine($$"""
+
+                        if (item.{{eTagProperty.Name}} != default)
+                            entity.ETag = new ETag(item.{{eTagProperty.Name}});
+                """);
+        }
+        
+        sourceTextBuilder.AppendLine("""
+
+                    return entity;
+                }
+            """);
 
         // Entity to item adapt method
 
@@ -122,6 +165,12 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         if (ignoreRowKeySourceProperty)
             sourceTextBuilder.AppendLine($$"""        {{rowKeyProperty.Name}} = entity.RowKey,""");
+
+        if (timestampProperty is not null && ignoreTimestampSourceProperty)
+            sourceTextBuilder.AppendLine($$"""        {{timestampProperty.Name}} = entity.Timestamp,""");
+
+        if (eTagProperty is not null && ignoreETagSourceProperty)
+            sourceTextBuilder.AppendLine($$"""        {{eTagProperty.Name}} = entity.ETag.ToString(),""");
 
         foreach (IPropertySymbol property in sourceProperties)
         {
@@ -140,7 +189,12 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 };
             }
             """);
+        
+        // Using statements
 
+        foreach (var statement in usingStatements.OrderByDescending(s => s))
+            sourceTextBuilder.Insert(0, $"using {statement};\r\n");
+        
         var sourceText = sourceTextBuilder.ToString();
 
         context.AddSource($"{adapterSymbol.Name}.g.cs", SourceText.From(sourceText, Encoding.UTF8));
@@ -256,7 +310,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             "char" => $"entity.GetString({property})[0]",
             "char?" => $"entity.GetString({property})?[0]",
             "string" or "string?" => $"entity.GetString({property})",
-            "bool" => $"entity.GetBoolean({property}).Value",
+            "bool" => $"entity.GetBoolean({property}).Value", // TODO: Check for null
             "bool?" => $"entity.GetBoolean({property})",
             "byte" => $"(byte)entity.GetInt32({property}).Value",
             "byte?" => $"(byte?)entity.GetInt32({property})",

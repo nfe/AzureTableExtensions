@@ -2,9 +2,6 @@
 
 public class AzureTableAdapterBase<TSource> where TSource : class, new()
 {
-    // TODO: Timestamp property mapping
-    // TODO: ETag property mapping
-    
     // TODO: Include/Ignore properties
     // TODO: Properties renaming
 

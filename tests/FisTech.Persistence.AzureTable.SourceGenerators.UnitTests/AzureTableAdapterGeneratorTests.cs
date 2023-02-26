@@ -39,7 +39,12 @@ public class AzureTableAdapterGeneratorTests
 
             public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
             {
-                public ITableEntity Adapt(TestModel item) => new TableEntity(item.Country, item.State);
+                public ITableEntity Adapt(TestModel item)
+                {
+                    var entity = new TableEntity(item.Country, item.State);
+
+                    return entity;
+                }
 
                 public TestModel Adapt(TableEntity entity) => new()
                 {
@@ -66,16 +71,22 @@ public class AzureTableAdapterGeneratorTests
     }
 
     [Fact]
-    public async Task Generator_AddSchemaSourceProperties_ReturnsAdapter()
+    public async Task Generator_AllSchemaPropertiesModel_ReturnsAdapter()
     {
         const string modelSource = """
+            using System;
+
             namespace TestNamespace.Models;
 
             public class TestModel
             {
-                public string State { get; set; }
+                public string MyPartitionKey { get; set; }
 
-                public string Country { get; set; }
+                public string MyRowKey { get; set; }
+
+                public DateTimeOffset? MyTimestamp { get; set; }
+
+                public string? MyETag { get; set; }
             }
             """;
 
@@ -85,12 +96,15 @@ public class AzureTableAdapterGeneratorTests
 
             namespace TestNamespace.Adapters;
 
-            [PartitionKey(nameof(TestModel.Country), IgnoreSourceProperty = false)]
-            [RowKey(nameof(TestModel.State), IgnoreSourceProperty = false)]
+            [PartitionKey(nameof(TestModel.MyPartitionKey))]
+            [RowKey(nameof(TestModel.MyRowKey))]
+            [Timestamp(nameof(TestModel.MyTimestamp))]
+            [ETag(nameof(TestModel.MyETag))]
             public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
             """;
 
         const string expected = """
+            using Azure;
             using Azure.Data.Tables;
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -99,16 +113,113 @@ public class AzureTableAdapterGeneratorTests
 
             public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
             {
-                public ITableEntity Adapt(TestModel item) => new TableEntity(item.Country, item.State)
+                public ITableEntity Adapt(TestModel item)
                 {
-                    { nameof(TestModel.State), item.State },
-                    { nameof(TestModel.Country), item.Country },
-                };
+                    var entity = new TableEntity(item.MyPartitionKey, item.MyRowKey);
+
+                    if (item.MyTimestamp != default)
+                        entity.Timestamp = item.MyTimestamp;
+
+                    if (item.MyETag != default)
+                        entity.ETag = new ETag(item.MyETag);
+
+                    return entity;
+                }
 
                 public TestModel Adapt(TableEntity entity) => new()
                 {
-                    State = entity.GetString(nameof(TestModel.State)),
-                    Country = entity.GetString(nameof(TestModel.Country)),
+                    MyPartitionKey = entity.PartitionKey,
+                    MyRowKey = entity.RowKey,
+                    MyTimestamp = entity.Timestamp,
+                    MyETag = entity.ETag.ToString(),
+                };
+            }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { modelSource, adapterSource },
+                GeneratedSources =
+                {
+                    (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
+                        SourceText.From(expected, Encoding.UTF8))
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task Generator_AddSchemaSourceProperties_ReturnsAdapter()
+    {
+        const string modelSource = """
+            using System;
+
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public string MyPartitionKey { get; set; }
+
+                public string MyRowKey { get; set; }
+
+                public DateTimeOffset? MyTimestamp { get; set; }
+
+                public string? MyETag { get; set; }
+            }
+            """;
+
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(TestModel.MyPartitionKey), IgnoreSourceProperty = false)]
+            [RowKey(nameof(TestModel.MyRowKey), IgnoreSourceProperty = false)]
+            [Timestamp(nameof(TestModel.MyTimestamp), IgnoreSourceProperty = false)]
+            [ETag(nameof(TestModel.MyETag), IgnoreSourceProperty = false)]
+            public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+            """;
+
+        const string expected = """
+            using Azure;
+            using Azure.Data.Tables;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
+            {
+                public ITableEntity Adapt(TestModel item)
+                {
+                    var entity = new TableEntity(item.MyPartitionKey, item.MyRowKey)
+                    {
+                        { nameof(TestModel.MyPartitionKey), item.MyPartitionKey },
+                        { nameof(TestModel.MyRowKey), item.MyRowKey },
+                        { nameof(TestModel.MyTimestamp), item.MyTimestamp },
+                        { nameof(TestModel.MyETag), item.MyETag },
+                    };
+
+                    if (item.MyTimestamp != default)
+                        entity.Timestamp = item.MyTimestamp;
+
+                    if (item.MyETag != default)
+                        entity.ETag = new ETag(item.MyETag);
+
+                    return entity;
+                }
+
+                public TestModel Adapt(TableEntity entity) => new()
+                {
+                    MyPartitionKey = entity.GetString(nameof(TestModel.MyPartitionKey)),
+                    MyRowKey = entity.GetString(nameof(TestModel.MyRowKey)),
+                    MyTimestamp = entity.GetDateTimeOffset(nameof(TestModel.MyTimestamp)),
+                    MyETag = entity.GetString(nameof(TestModel.MyETag)),
                 };
             }
             """;
@@ -223,35 +334,40 @@ public class AzureTableAdapterGeneratorTests
 
             public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
             {
-                public ITableEntity Adapt(TestModel item) => new TableEntity(item.MyString, item.MyString)
+                public ITableEntity Adapt(TestModel item)
                 {
-                    { nameof(TestModel.MyChar), item.MyChar.ToString() },
-                    { nameof(TestModel.MyNullableChar), item.MyNullableChar?.ToString() },
-                    { nameof(TestModel.MyString), item.MyString },
-                    { nameof(TestModel.MyNullableString), item.MyNullableString },
-                    { nameof(TestModel.MyBool), item.MyBool },
-                    { nameof(TestModel.MyNullableBool), item.MyNullableBool },
-                    { nameof(TestModel.MyByte), item.MyByte },
-                    { nameof(TestModel.MyNullableByte), item.MyNullableByte },
-                    { nameof(TestModel.MyShort), item.MyShort },
-                    { nameof(TestModel.MyNullableShort), item.MyNullableShort },
-                    { nameof(TestModel.MyInt), item.MyInt },
-                    { nameof(TestModel.MyNullableInt), item.MyNullableInt },
-                    { nameof(TestModel.MyLong), item.MyLong },
-                    { nameof(TestModel.MyNullableLong), item.MyNullableLong },
-                    { nameof(TestModel.MyFloat), item.MyFloat },
-                    { nameof(TestModel.MyNullableFloat), item.MyNullableFloat },
-                    { nameof(TestModel.MyDouble), item.MyDouble },
-                    { nameof(TestModel.MyNullableDouble), item.MyNullableDouble },
-                    { nameof(TestModel.MyDateTimeOffset), item.MyDateTimeOffset },
-                    { nameof(TestModel.MyNullableDateTimeOffset), item.MyNullableDateTimeOffset },
-                    { nameof(TestModel.MyGuid), item.MyGuid },
-                    { nameof(TestModel.MyNullableGuid), item.MyNullableGuid },
-                    { nameof(TestModel.MyEnum), (int)item.MyEnum },
-                    { nameof(TestModel.MyNullableEnum), (int?)item.MyNullableEnum },
-                    { nameof(TestModel.MyByteArray), item.MyByteArray },
-                    { nameof(TestModel.MyBinaryData), item.MyBinaryData },
-                };
+                    var entity = new TableEntity(item.MyString, item.MyString)
+                    {
+                        { nameof(TestModel.MyChar), item.MyChar.ToString() },
+                        { nameof(TestModel.MyNullableChar), item.MyNullableChar?.ToString() },
+                        { nameof(TestModel.MyString), item.MyString },
+                        { nameof(TestModel.MyNullableString), item.MyNullableString },
+                        { nameof(TestModel.MyBool), item.MyBool },
+                        { nameof(TestModel.MyNullableBool), item.MyNullableBool },
+                        { nameof(TestModel.MyByte), item.MyByte },
+                        { nameof(TestModel.MyNullableByte), item.MyNullableByte },
+                        { nameof(TestModel.MyShort), item.MyShort },
+                        { nameof(TestModel.MyNullableShort), item.MyNullableShort },
+                        { nameof(TestModel.MyInt), item.MyInt },
+                        { nameof(TestModel.MyNullableInt), item.MyNullableInt },
+                        { nameof(TestModel.MyLong), item.MyLong },
+                        { nameof(TestModel.MyNullableLong), item.MyNullableLong },
+                        { nameof(TestModel.MyFloat), item.MyFloat },
+                        { nameof(TestModel.MyNullableFloat), item.MyNullableFloat },
+                        { nameof(TestModel.MyDouble), item.MyDouble },
+                        { nameof(TestModel.MyNullableDouble), item.MyNullableDouble },
+                        { nameof(TestModel.MyDateTimeOffset), item.MyDateTimeOffset },
+                        { nameof(TestModel.MyNullableDateTimeOffset), item.MyNullableDateTimeOffset },
+                        { nameof(TestModel.MyGuid), item.MyGuid },
+                        { nameof(TestModel.MyNullableGuid), item.MyNullableGuid },
+                        { nameof(TestModel.MyEnum), (int)item.MyEnum },
+                        { nameof(TestModel.MyNullableEnum), (int?)item.MyNullableEnum },
+                        { nameof(TestModel.MyByteArray), item.MyByteArray },
+                        { nameof(TestModel.MyBinaryData), item.MyBinaryData },
+                    };
+
+                    return entity;
+                }
 
                 public TestModel Adapt(TableEntity entity) => new()
                 {
