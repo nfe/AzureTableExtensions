@@ -83,54 +83,45 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         // Item to entity adapt method
 
-        sourceTextBuilder.AppendLine($$"""
-                public {{nameof(ITableEntity)}} Adapt({{sourceSymbol.Name}} item)
-                {
-                    var entity = new {{nameof(TableEntity)}}(item.{{partitionKeyProperty.Name}}, item.{{rowKeyProperty.Name}});
-            """);
+        sourceTextBuilder.Append(
+            $$"""    public {{nameof(ITableEntity)}} Adapt({{sourceSymbol.Name}} item) => new {{nameof(TableEntity)}}(item.{{partitionKeyProperty.Name}}, item.{{rowKeyProperty.Name}})""");
 
-        foreach (IPropertySymbol property in sourceProperties)
+        if (sourceProperties.Length == 0)
+            sourceTextBuilder.AppendLine(";");
+        else
         {
-            var setMethod = GetEntitySetMethod(property.Type, property.Name);
+            sourceTextBuilder.AppendLine("\r\n    {");
 
-            if (setMethod is null)
+            foreach (IPropertySymbol property in sourceProperties)
             {
-                ReportUnsupportedPropertyType(property);
-                return;
+                var setMethod = GetEntitySetMethod(property.Type, property.Name);
+
+                if (setMethod is null)
+                {
+                    ReportUnsupportedPropertyType(property);
+                    return;
+                }
+
+                sourceTextBuilder.AppendLine(
+                    $$"""        { nameof({{sourceSymbol.Name}}.{{property.Name}}), {{setMethod}} },""");
             }
 
-            sourceTextBuilder.AppendLine(
-                $$"""        entity.Add(nameof({{sourceSymbol.Name}}.{{property.Name}}), {{setMethod}});""");
+            sourceTextBuilder.AppendLine("    };");
         }
-
-        sourceTextBuilder.AppendLine("""
-            
-                    return entity;
-                }
-            """);
 
         // Entity to item adapt method
 
         sourceTextBuilder.AppendLine($$"""
 
-                public {{sourceSymbol.Name}} Adapt({{nameof(TableEntity)}} entity)
+                public {{sourceSymbol.Name}} Adapt({{nameof(TableEntity)}} entity) => new()
                 {
-                    var item = new {{sourceSymbol.Name}}();
             """);
 
         if (ignorePartitionKeySourceProperty)
-        {
-            sourceTextBuilder.AppendLine($$"""
-                        item.{{partitionKeyProperty.Name}} = entity.PartitionKey;
-                """);
-        }
+            sourceTextBuilder.AppendLine($$"""        {{partitionKeyProperty.Name}} = entity.PartitionKey,""");
 
         if (ignoreRowKeySourceProperty)
-        {
-            sourceTextBuilder.AppendLine($$"""
-                        item.{{rowKeyProperty.Name}} = entity.RowKey;
-                """);
-        }
+            sourceTextBuilder.AppendLine($$"""        {{rowKeyProperty.Name}} = entity.RowKey,""");
 
         foreach (IPropertySymbol property in sourceProperties)
         {
@@ -142,18 +133,14 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 return;
             }
 
-            sourceTextBuilder.AppendLine($$"""
-                        item.{{property.Name}} = {{getMethod}};
-                """);
+            sourceTextBuilder.AppendLine($$"""        {{property.Name}} = {{getMethod}},""");
         }
 
         sourceTextBuilder.Append("""
-            
-                    return item;
-                }
+                };
             }
             """);
-        
+
         var sourceText = sourceTextBuilder.ToString();
 
         context.AddSource($"{adapterSymbol.Name}.g.cs", SourceText.From(sourceText, Encoding.UTF8));
