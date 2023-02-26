@@ -1,6 +1,6 @@
 ﻿using Azure.Data.Tables;
 
-namespace FisTech.Persistence.AzureTable.SourceGenerators.Tests;
+namespace FisTech.Persistence.AzureTable.SourceGenerators.UnitTests;
 
 public class AzureTableAdapterFixture
 {

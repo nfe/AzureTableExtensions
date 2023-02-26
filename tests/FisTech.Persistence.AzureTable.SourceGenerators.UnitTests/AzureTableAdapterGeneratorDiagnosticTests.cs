@@ -1,10 +1,10 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using VerifyCS =
-    FisTech.Persistence.AzureTable.SourceGenerators.Tests.CSharpSourceGeneratorVerifier<
+    FisTech.Persistence.AzureTable.SourceGenerators.UnitTests.CSharpSourceGeneratorVerifier<
         FisTech.Persistence.AzureTable.SourceGenerators.AzureTableAdapterGenerator>;
 
-namespace FisTech.Persistence.AzureTable.SourceGenerators.Tests;
+namespace FisTech.Persistence.AzureTable.SourceGenerators.UnitTests;
 
 public class AzureTableAdapterGeneratorDiagnosticTests : IClassFixture<AzureTableAdapterFixture>
 {

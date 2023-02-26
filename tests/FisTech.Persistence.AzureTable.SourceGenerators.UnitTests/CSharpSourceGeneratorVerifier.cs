@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing.Verifiers;
 using System.Collections.Immutable;
 
-namespace FisTech.Persistence.AzureTable.SourceGenerators.Tests;
+namespace FisTech.Persistence.AzureTable.SourceGenerators.UnitTests;
 
 public static class CSharpSourceGeneratorVerifier<TSourceGenerator> where TSourceGenerator : ISourceGenerator, new()
 {

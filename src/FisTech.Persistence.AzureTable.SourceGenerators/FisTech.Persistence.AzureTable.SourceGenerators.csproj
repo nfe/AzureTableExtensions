@@ -40,7 +40,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="$(AssemblyName).Tests"/>
+        <InternalsVisibleTo Include="$(AssemblyName).UnitTests"/>
     </ItemGroup>
 
 </Project>

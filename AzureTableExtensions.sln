@@ -18,7 +18,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FisTech.Persistence.AzureTa
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{40F069DC-2235-494F-BA81-9C3FCC8C15F7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FisTech.Persistence.AzureTable.SourceGenerators.Tests", "tests\FisTech.Persistence.AzureTable.SourceGenerators.Tests\FisTech.Persistence.AzureTable.SourceGenerators.Tests.csproj", "{16205511-A3B8-4653-AA2B-533DFE7C87CD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FisTech.Persistence.AzureTable.SourceGenerators.UnitTests", "tests\FisTech.Persistence.AzureTable.SourceGenerators.UnitTests\FisTech.Persistence.AzureTable.SourceGenerators.UnitTests.csproj", "{16205511-A3B8-4653-AA2B-533DFE7C87CD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
