@@ -26,7 +26,7 @@ internal static class DiagnosticDescriptors
 
     // @formatter:off
     
-    // TODO: Create analyzer for this with code fix
+    // TODO: Create possible analyzers with code fix
 
     public static readonly DiagnosticDescriptor InvalidClassAccessibility = new("AZTBGEN001",
         "Adapter class invalid accessibility modifier", 
@@ -49,13 +49,18 @@ internal static class DiagnosticDescriptors
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     public static readonly DiagnosticDescriptor PropertyNotFound = new("AZTBGEN005",
-        "Adapter class property not found for an attribute",
-        "Adapter class '{0}' property not found for '{1}' attribute",
+        "Property not found",
+        "Property not found for '{0}' on adapter class '{1}'",
+        Categories.Usage, DiagnosticSeverity.Error, true);
+    
+    public static readonly DiagnosticDescriptor PropertyTypeMismatch = new("AZTBGEN006",
+        "Property type mismatch",
+        "'{0}' attribute must be of type '{1}' on adapter class '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor UnsupportedPropertyType = new("AZTBGEN006",
-        "Adapter class unsupported property type",
-        "Adapter class '{0}' property '{1}' does not support type '{2}'",
+    public static readonly DiagnosticDescriptor UnsupportedPropertyType = new("AZTBGEN007",
+        "Unsupported property type",
+        "Adapter class '{0}' does not support type '{1}' for property '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     // @formatter:on

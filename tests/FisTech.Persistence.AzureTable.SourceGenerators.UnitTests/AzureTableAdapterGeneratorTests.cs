@@ -375,25 +375,25 @@ public class AzureTableAdapterGeneratorTests
                     MyNullableChar = entity.GetString(nameof(TestModel.MyNullableChar))?[0],
                     MyString = entity.GetString(nameof(TestModel.MyString)),
                     MyNullableString = entity.GetString(nameof(TestModel.MyNullableString)),
-                    MyBool = entity.GetBoolean(nameof(TestModel.MyBool)).Value,
+                    MyBool = entity.GetBoolean(nameof(TestModel.MyBool)).GetValueOrDefault(),
                     MyNullableBool = entity.GetBoolean(nameof(TestModel.MyNullableBool)),
-                    MyByte = (byte)entity.GetInt32(nameof(TestModel.MyByte)).Value,
+                    MyByte = (byte)entity.GetInt32(nameof(TestModel.MyByte)).GetValueOrDefault(),
                     MyNullableByte = (byte?)entity.GetInt32(nameof(TestModel.MyNullableByte)),
-                    MyShort = (short)entity.GetInt32(nameof(TestModel.MyShort)).Value,
+                    MyShort = (short)entity.GetInt32(nameof(TestModel.MyShort)).GetValueOrDefault(),
                     MyNullableShort = (short?)entity.GetInt32(nameof(TestModel.MyNullableShort)),
-                    MyInt = entity.GetInt32(nameof(TestModel.MyInt)).Value,
+                    MyInt = entity.GetInt32(nameof(TestModel.MyInt)).GetValueOrDefault(),
                     MyNullableInt = entity.GetInt32(nameof(TestModel.MyNullableInt)),
-                    MyLong = entity.GetInt64(nameof(TestModel.MyLong)).Value,
+                    MyLong = entity.GetInt64(nameof(TestModel.MyLong)).GetValueOrDefault(),
                     MyNullableLong = entity.GetInt64(nameof(TestModel.MyNullableLong)),
-                    MyFloat = (float)entity.GetDouble(nameof(TestModel.MyFloat)).Value,
+                    MyFloat = (float)entity.GetDouble(nameof(TestModel.MyFloat)).GetValueOrDefault(),
                     MyNullableFloat = (float?)entity.GetDouble(nameof(TestModel.MyNullableFloat)),
-                    MyDouble = entity.GetDouble(nameof(TestModel.MyDouble)).Value,
+                    MyDouble = entity.GetDouble(nameof(TestModel.MyDouble)).GetValueOrDefault(),
                     MyNullableDouble = entity.GetDouble(nameof(TestModel.MyNullableDouble)),
-                    MyDateTimeOffset = entity.GetDateTimeOffset(nameof(TestModel.MyDateTimeOffset)).Value,
+                    MyDateTimeOffset = entity.GetDateTimeOffset(nameof(TestModel.MyDateTimeOffset)).GetValueOrDefault(),
                     MyNullableDateTimeOffset = entity.GetDateTimeOffset(nameof(TestModel.MyNullableDateTimeOffset)),
-                    MyGuid = entity.GetGuid(nameof(TestModel.MyGuid)).Value,
+                    MyGuid = entity.GetGuid(nameof(TestModel.MyGuid)).GetValueOrDefault(),
                     MyNullableGuid = entity.GetGuid(nameof(TestModel.MyNullableGuid)),
-                    MyEnum = (TestNamespace.Models.MyEnum)entity.GetInt32(nameof(TestModel.MyEnum)).Value,
+                    MyEnum = (TestNamespace.Models.MyEnum)entity.GetInt32(nameof(TestModel.MyEnum)).GetValueOrDefault(),
                     MyNullableEnum = (TestNamespace.Models.MyEnum?)entity.GetInt32(nameof(TestModel.MyNullableEnum)),
                     MyByteArray = entity.GetBinary(nameof(TestModel.MyByteArray)),
                     MyBinaryData = entity.GetBinaryData(nameof(TestModel.MyBinaryData)),
@@ -416,4 +416,6 @@ public class AzureTableAdapterGeneratorTests
 
         await test.RunAsync();
     }
+    
+    // TODO: Properties access modifiers test
 }

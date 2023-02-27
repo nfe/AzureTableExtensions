@@ -34,7 +34,11 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             return;
         }
 
-        // TODO: Validate PartitionKey property type
+        if (partitionKeyProperty.Type.ToString() is not "string")
+        {
+            ReportPropertyTypeMismatch(nameof(PartitionKeyAttribute), "string");
+            return;
+        }
 
         IPropertySymbol? rowKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
             nameof(RowKeyAttribute), out var ignoreRowKeySourceProperty);
@@ -45,17 +49,29 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             return;
         }
 
-        // TODO: Validate RowKey property type
+        if (rowKeyProperty.Type.ToString() is not "string")
+        {
+            ReportPropertyTypeMismatch(nameof(RowKeyAttribute), "string");
+            return;
+        }
 
         IPropertySymbol? timestampProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
             nameof(TimestampAttribute), out var ignoreTimestampSourceProperty);
 
-        // TODO: Validate Timestamp property type
+        if (timestampProperty is not null && timestampProperty.Type.ToString() is not "System.DateTimeOffset?" or "System.DateTimeOffset")
+        {
+            ReportPropertyTypeMismatch(nameof(TimestampAttribute), "System.DateTimeOffset? or System.DateTimeOffset");
+            return;
+        }
 
         IPropertySymbol? eTagProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
             nameof(ETagAttribute), out var ignoreETagSourceProperty);
 
-        // TODO: Validate ETag property type
+        if (eTagProperty is not null && eTagProperty.Type.ToString() is not "string?" or "string")
+        {
+            ReportPropertyTypeMismatch(nameof(ETagAttribute), "string? or string");
+            return;
+        }
 
         var ignoredProperties = new HashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
 
@@ -127,7 +143,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         }
 
         if (timestampProperty is not null)
-            // Apply default condition to avoid unnecessary serialization
+            // Apply default comparison to avoid unnecessary serialization
             sourceTextBuilder.AppendLine($$"""
 
                         if (item.{{timestampProperty.Name}} != default)
@@ -138,7 +154,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         {
             usingStatements.Add(typeof(ETag).Namespace);
             
-            // Apply default condition to avoid unnecessary serialization
+            // Apply default comparison to avoid unnecessary serialization
             sourceTextBuilder.AppendLine($$"""
 
                         if (item.{{eTagProperty.Name}} != default)
@@ -201,11 +217,15 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         void ReportPropertyNotFound(string attributeName) => context.ReportDiagnostic(
             Diagnostic.Create(DiagnosticDescriptors.PropertyNotFound, adapterSymbol.Locations.FirstOrDefault(),
-                adapterSymbol.ToDisplayString(), attributeName));
+                attributeName, adapterSymbol.ToDisplayString()));
+        
+        void ReportPropertyTypeMismatch(string attributeName, string expectedType) => context.ReportDiagnostic(
+            Diagnostic.Create(DiagnosticDescriptors.PropertyTypeMismatch, adapterSymbol.Locations.FirstOrDefault(),
+                attributeName, expectedType, adapterSymbol.ToDisplayString()));
 
         void ReportUnsupportedPropertyType(IPropertySymbol propertySymbol) => context.ReportDiagnostic(
             Diagnostic.Create(DiagnosticDescriptors.UnsupportedPropertyType, adapterSymbol.Locations.FirstOrDefault(),
-                adapterSymbol.ToDisplayString(), propertySymbol.Name, propertySymbol.Type.ToDisplayString()));
+                adapterSymbol.ToDisplayString(), propertySymbol.Type.ToDisplayString(), propertySymbol.Name));
     }
 
     private static bool IsValidAdapterClass(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol)
@@ -300,33 +320,34 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         var typeName = typeSymbol.ToString();
 
         if (typeSymbol.TypeKind == TypeKind.Enum)
-            return $"({typeName})entity.GetInt32({property}).Value";
+            return $"({typeName})entity.GetInt32({property}).GetValueOrDefault()";
 
         if (typeSymbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsNullableTypeKind(TypeKind.Enum))
             return $"({typeName})entity.GetInt32({property})";
 
+        // TODO: Use symbol property instead of string literals
         return typeName switch
         {
             "char" => $"entity.GetString({property})[0]",
             "char?" => $"entity.GetString({property})?[0]",
             "string" or "string?" => $"entity.GetString({property})",
-            "bool" => $"entity.GetBoolean({property}).Value", // TODO: Check for null
+            "bool" => $"entity.GetBoolean({property}).GetValueOrDefault()",
             "bool?" => $"entity.GetBoolean({property})",
-            "byte" => $"(byte)entity.GetInt32({property}).Value",
+            "byte" => $"(byte)entity.GetInt32({property}).GetValueOrDefault()",
             "byte?" => $"(byte?)entity.GetInt32({property})",
-            "short" => $"(short)entity.GetInt32({property}).Value",
+            "short" => $"(short)entity.GetInt32({property}).GetValueOrDefault()",
             "short?" => $"(short?)entity.GetInt32({property})",
-            "int" => $"entity.GetInt32({property}).Value",
+            "int" => $"entity.GetInt32({property}).GetValueOrDefault()",
             "int?" => $"entity.GetInt32({property})",
-            "long" => $"entity.GetInt64({property}).Value",
+            "long" => $"entity.GetInt64({property}).GetValueOrDefault()",
             "long?" => $"entity.GetInt64({property})",
-            "float" => $"(float)entity.GetDouble({property}).Value",
+            "float" => $"(float)entity.GetDouble({property}).GetValueOrDefault()",
             "float?" => $"(float?)entity.GetDouble({property})",
-            "double" => $"entity.GetDouble({property}).Value",
+            "double" => $"entity.GetDouble({property}).GetValueOrDefault()",
             "double?" => $"entity.GetDouble({property})",
-            "System.DateTimeOffset" => $"entity.GetDateTimeOffset({property}).Value",
+            "System.DateTimeOffset" => $"entity.GetDateTimeOffset({property}).GetValueOrDefault()",
             "System.DateTimeOffset?" => $"entity.GetDateTimeOffset({property})",
-            "System.Guid" => $"entity.GetGuid({property}).Value",
+            "System.Guid" => $"entity.GetGuid({property}).GetValueOrDefault()",
             "System.Guid?" => $"entity.GetGuid({property})",
             "byte[]" => $"entity.GetBinary({property})",
             "System.BinaryData" => $"entity.GetBinaryData({property})",
