@@ -421,8 +421,6 @@ public class AzureTableAdapterGeneratorTests
     public async Task Generator_IgnoreNonPublicProperties_ReturnsAdapter()
     {
         const string modelSource = """
-            using System;
-
             namespace TestNamespace.Models;
 
             public class TestModel
