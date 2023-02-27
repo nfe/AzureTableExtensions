@@ -28,37 +28,32 @@ internal static class DiagnosticDescriptors
     
     // TODO: Create possible analyzers with code fix
 
-    public static readonly DiagnosticDescriptor InvalidClassAccessibility = new("AZTBGEN001",
-        "Adapter class invalid accessibility modifier", 
-        "Adapter class '{0}' should be public or internal", 
-        Categories.Usage, DiagnosticSeverity.Error, true);
-
-    public static readonly DiagnosticDescriptor InvalidAbstractClass = new("AZTBGEN002",
+    public static readonly DiagnosticDescriptor InvalidAbstractClass = new("AZTBGEN001",
         "Adapter class has abstract modifier", 
         "Adapter class '{0}' should not be abstract", 
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor InvalidGenericClass = new("AZTBGEN003",
+    public static readonly DiagnosticDescriptor InvalidGenericClass = new("AZTBGEN002",
         "Adapter class has generic type", 
         "Adapter class '{0}' does not support generic types", 
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor ClassIsNotPartial = new("AZTBGEN004",
+    public static readonly DiagnosticDescriptor ClassIsNotPartial = new("AZTBGEN003",
         "Adapter class is not partial",
         "Adapter class '{0}' must have to be partial", 
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor PropertyNotFound = new("AZTBGEN005",
+    public static readonly DiagnosticDescriptor PropertyNotFound = new("AZTBGEN004",
         "Property not found",
         "Property '{0}' not found for '{1}' on adapter class '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
     
-    public static readonly DiagnosticDescriptor PropertyTypeMismatch = new("AZTBGEN006",
+    public static readonly DiagnosticDescriptor PropertyTypeMismatch = new("AZTBGEN005",
         "Property type mismatch",
         "'{0}' attribute must be of type '{1}' on adapter class '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor UnsupportedPropertyType = new("AZTBGEN007",
+    public static readonly DiagnosticDescriptor UnsupportedPropertyType = new("AZTBGEN006",
         "Unsupported property type",
         "Adapter class '{0}' does not support type '{1}' for property '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);

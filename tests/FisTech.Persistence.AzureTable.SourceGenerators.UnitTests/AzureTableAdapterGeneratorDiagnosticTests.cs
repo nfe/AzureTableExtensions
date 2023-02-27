@@ -64,46 +64,8 @@ public class AzureTableAdapterGeneratorDiagnosticTests
         }
         """;
 
-    // TODO: Fix error CS1527: Elements defined in a namespace cannot be explicitly declared as private, protected, protected internal, or private protected
-    //     [Theory]
-    //     [InlineData("private")]
-    //     [InlineData("private protected")]
-    //     [InlineData("protected")]
-    //     [InlineData("protected internal")]
-    //     public async Task Generator_InvalidAdapterClassAccessibility_ReturnsDiagnosticErrorAZTBGEN001(string accessModifiers)
-    //     {
-    //         var adapterSource = $$"""
-    //             using FisTech.Persistence.AzureTable;
-    //             using TestNamespace.Models;
-    //     
-    //             namespace TestNamespace.Adapters;
-    //     
-    //             [PartitionKey(nameof(Movie.Director))]
-    //             [RowKey(nameof(Movie.Id))]
-    //             {{accessModifiers}} partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
-    //             """;
-    //     
-    //         var test = new AzureTableAdapterGeneratorTest
-    //         {
-    //             TestState =
-    //             {
-    //                 Sources = { ModelSource, adapterSource },
-    //                 ExpectedDiagnostics =
-    //                 {
-    //                     DiagnosticResult.CompilerError("AZTBGEN001")
-    //                         .WithSeverity(DiagnosticSeverity.Error)
-    //                         .WithLocation("/0/Test1.cs", 8, 22)
-    //                         .WithMessage(
-    //                             $"Adapter class 'TestNamespace.Adapters.MovieAdapter' should be public or internal")
-    //                 }
-    //             }
-    //         };
-    //     
-    //         await test.RunAsync();
-    //     }
-
     [Fact]
-    public async Task Generator_AbstractAdapterClass_ReturnsDiagnosticErrorAZTBGEN002()
+    public async Task Generator_AbstractAdapterClass_ReturnsDiagnosticErrorAZTBGEN001()
     {
         const string adapterSource = """
              using FisTech.Persistence.AzureTable;
@@ -123,7 +85,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
-                    DiagnosticResult.CompilerError("AZTBGEN002")
+                    DiagnosticResult.CompilerError("AZTBGEN001")
                         .WithSeverity(DiagnosticSeverity.Error)
                         .WithLocation("/0/Test1.cs", 8, 31)
                         .WithMessage(
@@ -136,7 +98,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     }
 
     [Fact]
-    public async Task Generator_GenericAdapterClass_ReturnsDiagnosticErrorAZTBGEN003()
+    public async Task Generator_GenericAdapterClass_ReturnsDiagnosticErrorAZTBGEN002()
     {
         const string adapterSource = """
              using FisTech.Persistence.AzureTable;
@@ -156,7 +118,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
-                    DiagnosticResult.CompilerError("AZTBGEN003")
+                    DiagnosticResult.CompilerError("AZTBGEN002")
                         .WithSeverity(DiagnosticSeverity.Error)
                         .WithLocation("/0/Test1.cs", 8, 22)
                         .WithMessage(
@@ -169,7 +131,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     }
 
     [Fact]
-    public async Task Generator_NonPartialAdapterClass_ReturnsDiagnosticErrorAZTBGEN004()
+    public async Task Generator_NonPartialAdapterClass_ReturnsDiagnosticErrorAZTBGEN003()
     {
         const string adapterSource = """
              using FisTech.Persistence.AzureTable;
@@ -189,7 +151,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
-                    DiagnosticResult.CompilerError("AZTBGEN004")
+                    DiagnosticResult.CompilerError("AZTBGEN003")
                         .WithSeverity(DiagnosticSeverity.Error)
                         .WithLocation("/0/Test1.cs", 8, 14)
                         .WithMessage(
@@ -208,7 +170,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     [InlineData("[PartitionKey(nameof(Movie.Director))]", "RowKeyAttribute", "null")]
     // Nonexistent PartitionKeyAttribute
     [InlineData("[PartitionKey(\"MyProperty\")]", "PartitionKeyAttribute", "MyProperty")]
-    public async Task Generator_NonexistentPropertyAttribute_ReturnsDiagnosticErrorAZTBGEN005(string attributeSource,
+    public async Task Generator_NonexistentPropertyAttribute_ReturnsDiagnosticErrorAZTBGEN004(string attributeSource,
         string attributeName, string propertyName)
     {
         var adapterSource = $$"""
@@ -228,7 +190,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
-                    DiagnosticResult.CompilerError("AZTBGEN005")
+                    DiagnosticResult.CompilerError("AZTBGEN004")
                         .WithSeverity(DiagnosticSeverity.Error)
                         .WithLocation("/0/Test1.cs", 7, 22)
                         .WithMessage(
@@ -269,7 +231,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
         [Timestamp(nameof(Movie.LastUpdate))]
         [ETag(nameof(Movie.Rating))]
         """, "ETagAttribute", "string? or string")]
-    public async Task Generator_PropertyTypeMismatch_ReturnsDiagnosticErrorAZTBGEN006(string attributesSource,
+    public async Task Generator_PropertyTypeMismatch_ReturnsDiagnosticErrorAZTBGEN005(string attributesSource,
         string attributeName, string propertyType)
     {
         var adapterSource = $$"""
@@ -289,7 +251,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
                 Sources = { ModelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
-                    DiagnosticResult.CompilerError("AZTBGEN006")
+                    DiagnosticResult.CompilerError("AZTBGEN005")
                         .WithSeverity(DiagnosticSeverity.Error)
                         .WithLocation("/0/Test1.cs", 10, 22)
                         .WithMessage(
@@ -306,7 +268,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     [InlineData("decimal?")]
     [InlineData("System.Uri")]
     [InlineData("NestedClass", "TestNamespace.Models.NestedClass")]
-    public async Task Generator_UnsupportedPropertyType_ReturnsDiagnosticErrorAZTBGEN007(string propertyType,
+    public async Task Generator_UnsupportedPropertyType_ReturnsDiagnosticErrorAZTBGEN006(string propertyType,
         string? displayName = null)
     {
         var modelSource = $$"""
@@ -345,7 +307,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
                 Sources = { modelSource, adapterSource },
                 ExpectedDiagnostics =
                 {
-                    DiagnosticResult.CompilerError("AZTBGEN007")
+                    DiagnosticResult.CompilerError("AZTBGEN006")
                         .WithSeverity(DiagnosticSeverity.Error)
                         .WithLocation("/0/Test1.cs", 8, 22)
                         .WithMessage(

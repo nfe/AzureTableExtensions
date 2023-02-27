@@ -246,12 +246,6 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
     private static bool IsValidAdapterClass(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol)
     {
-        if (adapterSymbol.DeclaredAccessibility is not Accessibility.Public or Accessibility.Internal)
-        {
-            ReportClassError(DiagnosticDescriptors.InvalidClassAccessibility);
-            return false;
-        }
-
         if (adapterSymbol.IsAbstract)
         {
             ReportClassError(DiagnosticDescriptors.InvalidAbstractClass);
