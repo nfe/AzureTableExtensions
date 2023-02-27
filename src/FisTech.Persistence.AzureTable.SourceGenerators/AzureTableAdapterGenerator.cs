@@ -26,11 +26,11 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         ITypeSymbol sourceSymbol = adapterSymbol.BaseType!.TypeArguments[0];
 
         IPropertySymbol? partitionKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            nameof(PartitionKeyAttribute), out var ignorePartitionKeySourceProperty);
+            nameof(PartitionKeyAttribute), out var partitionKeyPropertyName, out var ignorePartitionKeySourceProperty);
 
         if (partitionKeyProperty is null)
         {
-            ReportPropertyNotFound(nameof(PartitionKeyAttribute));
+            ReportPropertyNotFound(partitionKeyPropertyName, nameof(PartitionKeyAttribute));
             return;
         }
 
@@ -41,11 +41,11 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         }
 
         IPropertySymbol? rowKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            nameof(RowKeyAttribute), out var ignoreRowKeySourceProperty);
+            nameof(RowKeyAttribute), out var rowKeyPropertyName, out var ignoreRowKeySourceProperty);
 
         if (rowKeyProperty is null)
         {
-            ReportPropertyNotFound(nameof(RowKeyAttribute));
+            ReportPropertyNotFound(rowKeyPropertyName, nameof(RowKeyAttribute));
             return;
         }
 
@@ -56,16 +56,17 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         }
 
         IPropertySymbol? timestampProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            nameof(TimestampAttribute), out var ignoreTimestampSourceProperty);
+            nameof(TimestampAttribute), out _, out var ignoreTimestampSourceProperty);
 
-        if (timestampProperty is not null && timestampProperty.Type.ToString() is not "System.DateTimeOffset?" or "System.DateTimeOffset")
+        if (timestampProperty is not null
+            && timestampProperty.Type.ToString() is not "System.DateTimeOffset?" or "System.DateTimeOffset")
         {
             ReportPropertyTypeMismatch(nameof(TimestampAttribute), "System.DateTimeOffset? or System.DateTimeOffset");
             return;
         }
 
         IPropertySymbol? eTagProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            nameof(ETagAttribute), out var ignoreETagSourceProperty);
+            nameof(ETagAttribute), out _, out var ignoreETagSourceProperty);
 
         if (eTagProperty is not null && eTagProperty.Type.ToString() is not "string?" or "string")
         {
@@ -74,6 +75,21 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         }
 
         var ignoredProperties = new HashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
+
+        foreach (AttributeData ignoreAttribute in adapterSymbol.GetAttributes()
+            .Where(a => a.AttributeClass?.Name == nameof(IgnoreAttribute)))
+        {
+            IPropertySymbol? property = GetPropertyFromAttribute(sourceSymbol, ignoreAttribute,
+                out var ignorePropertyName);
+
+            if (property is null)
+            {
+                ReportPropertyNotFound(ignorePropertyName, nameof(IgnoreAttribute));
+                return;
+            }
+
+            ignoredProperties.Add(property);
+        }
 
         if (ignorePartitionKeySourceProperty)
             ignoredProperties.Add(partitionKeyProperty);
@@ -100,7 +116,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             typeof(IAzureTableAdapter<>).Namespace,
             sourceSymbol.ContainingNamespace.ToDisplayString()
         };
-        
+
         // Class declaration
 
         sourceTextBuilder.AppendLine($$"""
@@ -153,7 +169,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         if (eTagProperty is not null)
         {
             usingStatements.Add(typeof(ETag).Namespace);
-            
+
             // Apply default comparison to avoid unnecessary serialization
             sourceTextBuilder.AppendLine($$"""
 
@@ -161,7 +177,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                             entity.ETag = new ETag(item.{{eTagProperty.Name}});
                 """);
         }
-        
+
         sourceTextBuilder.AppendLine("""
 
                     return entity;
@@ -205,20 +221,20 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 };
             }
             """);
-        
+
         // Using statements
 
         foreach (var statement in usingStatements.OrderByDescending(s => s))
             sourceTextBuilder.Insert(0, $"using {statement};\r\n");
-        
+
         var sourceText = sourceTextBuilder.ToString();
 
         context.AddSource($"{adapterSymbol.Name}.g.cs", SourceText.From(sourceText, Encoding.UTF8));
 
-        void ReportPropertyNotFound(string attributeName) => context.ReportDiagnostic(
+        void ReportPropertyNotFound(string? propertyName, string attributeName) => context.ReportDiagnostic(
             Diagnostic.Create(DiagnosticDescriptors.PropertyNotFound, adapterSymbol.Locations.FirstOrDefault(),
-                attributeName, adapterSymbol.ToDisplayString()));
-        
+                propertyName ?? "null", attributeName, adapterSymbol.ToDisplayString()));
+
         void ReportPropertyTypeMismatch(string attributeName, string expectedType) => context.ReportDiagnostic(
             Diagnostic.Create(DiagnosticDescriptors.PropertyTypeMismatch, adapterSymbol.Locations.FirstOrDefault(),
                 attributeName, expectedType, adapterSymbol.ToDisplayString()));
@@ -261,7 +277,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
     }
 
     private static IPropertySymbol? GetSchemaPropertyFromAttribute(INamedTypeSymbol adapterSymbol,
-        ITypeSymbol sourceTypeSymbol, string attributeName, out bool ignoreSourceProperty)
+        ITypeSymbol sourceTypeSymbol, string attributeName, out string? propertyName, out bool ignoreSourceProperty)
     {
         AttributeData? attribute = adapterSymbol.GetAttributes()
             .FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
@@ -271,25 +287,27 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 .FirstOrDefault(n => n.Key == nameof(SchemaPropertyAttributeBase.IgnoreSourceProperty))
                 .Value.Value is not (bool or true);
 
-        return attribute is not null ? GetPropertyFromAttribute(sourceTypeSymbol, attribute) : null;
+        return GetPropertyFromAttribute(sourceTypeSymbol, attribute, out propertyName);
     }
 
     private static IPropertySymbol? GetPropertyFromAttribute(INamedTypeSymbol adapterSymbol,
-        ITypeSymbol sourceTypeSymbol, string attributeName)
+        ITypeSymbol sourceTypeSymbol, string attributeName, out string? propertyName)
     {
         AttributeData? attribute = adapterSymbol.GetAttributes()
             .FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
 
-        return attribute is not null ? GetPropertyFromAttribute(sourceTypeSymbol, attribute) : null;
+        return GetPropertyFromAttribute(sourceTypeSymbol, attribute, out propertyName);
     }
 
-    private static IPropertySymbol? GetPropertyFromAttribute(ITypeSymbol sourceTypeSymbol, AttributeData attribute)
+    private static IPropertySymbol? GetPropertyFromAttribute(ITypeSymbol sourceTypeSymbol, AttributeData? attribute,
+        out string? propertyName)
     {
-        // TODO: Validate PropertyAttributeBase base type 
+        var sourcePropertyName = attribute?.ConstructorArguments[0].Value as string;
+        propertyName = sourcePropertyName;
 
-        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
-
-        return sourceTypeSymbol.GetInstancePublicProperties().FirstOrDefault(p => p.Name == propertyName);
+        return sourcePropertyName is not null
+            ? sourceTypeSymbol.GetInstancePublicProperties().FirstOrDefault(p => p.Name == sourcePropertyName)
+            : null;
     }
 
     private static string? GetEntitySetMethod(ITypeSymbol typeSymbol, string propertyName)

@@ -493,4 +493,81 @@ public class AzureTableAdapterGeneratorTests
 
         await test.RunAsync();
     }
+
+    [Fact]
+    public async Task Generator_IgnoreProperties_ReturnsAdapter()
+    {
+        const string modelSource = """
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public string State { get; set; }
+
+                public string Country { get; set; }
+
+                public string Abbreviation { get; set; }
+
+                public string CapitalCity { get; set; }
+
+                public int Population { get; set; }
+            }
+            """;
+
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(TestModel.Country))]
+            [RowKey(nameof(TestModel.State))]
+            [Ignore(nameof(TestModel.Abbreviation))]
+            [Ignore(nameof(TestModel.Population))]
+            public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+            """;
+
+        const string expected = """
+            using Azure.Data.Tables;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
+            {
+                public ITableEntity Adapt(TestModel item)
+                {
+                    var entity = new TableEntity(item.Country, item.State)
+                    {
+                        { nameof(TestModel.CapitalCity), item.CapitalCity },
+                    };
+
+                    return entity;
+                }
+
+                public TestModel Adapt(TableEntity entity) => new()
+                {
+                    Country = entity.PartitionKey,
+                    State = entity.RowKey,
+                    CapitalCity = entity.GetString(nameof(TestModel.CapitalCity)),
+                };
+            }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { modelSource, adapterSource },
+                GeneratedSources =
+                {
+                    (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
+                        SourceText.From(expected, Encoding.UTF8))
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
 }

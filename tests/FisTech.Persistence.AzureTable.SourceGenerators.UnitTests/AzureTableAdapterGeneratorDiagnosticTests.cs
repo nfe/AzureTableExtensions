@@ -203,13 +203,13 @@ public class AzureTableAdapterGeneratorDiagnosticTests
 
     [Theory]
     // Missing PartitionKeyAttribute
-    [InlineData("[RowKey(nameof(Movie.Id))]", "PartitionKeyAttribute")]
+    [InlineData("[RowKey(nameof(Movie.Id))]", "PartitionKeyAttribute", "null")]
     // Missing RowKeyAttribute
-    [InlineData("[PartitionKey(nameof(Movie.Director))]", "RowKeyAttribute")]
+    [InlineData("[PartitionKey(nameof(Movie.Director))]", "RowKeyAttribute", "null")]
     // Nonexistent PartitionKeyAttribute
-    [InlineData("[PartitionKey(\"MyProperty\")]", "PartitionKeyAttribute")]
+    [InlineData("[PartitionKey(\"MyProperty\")]", "PartitionKeyAttribute", "MyProperty")]
     public async Task Generator_NonexistentPropertyAttribute_ReturnsDiagnosticErrorAZTBGEN005(string attributeSource,
-        string attributeName)
+        string attributeName, string propertyName)
     {
         var adapterSource = $$"""
             using FisTech.Persistence.AzureTable;
@@ -232,7 +232,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
                         .WithSeverity(DiagnosticSeverity.Error)
                         .WithLocation("/0/Test1.cs", 7, 22)
                         .WithMessage(
-                            $"Property not found for '{attributeName}' on adapter class 'TestNamespace.Adapters.MovieAdapter'")
+                            $"Property '{propertyName}' not found for '{attributeName}' on adapter class 'TestNamespace.Adapters.MovieAdapter'")
                 }
             }
         };

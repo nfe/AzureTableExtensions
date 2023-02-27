@@ -36,3 +36,9 @@ public sealed class ETagAttribute : SchemaPropertyAttributeBase
 {
     public ETagAttribute(string sourcePropertyName) : base(sourcePropertyName) { }
 }
+
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+public sealed class IgnoreAttribute : PropertyAttributeBase
+{
+    public IgnoreAttribute(string sourcePropertyName) : base(sourcePropertyName) { }
+}

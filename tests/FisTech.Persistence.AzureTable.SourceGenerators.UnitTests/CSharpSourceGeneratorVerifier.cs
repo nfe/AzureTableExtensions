@@ -41,6 +41,8 @@ public static class CSharpSourceGeneratorVerifier<TSourceGenerator> where TSourc
 
 public class AzureTableAdapterGeneratorTest : CSharpSourceGeneratorVerifier<AzureTableAdapterGenerator>.Test
 {
+    // TODO: Change compilation level from error to warning
+    
     public AzureTableAdapterGeneratorTest()
     {
 #if NET5_0

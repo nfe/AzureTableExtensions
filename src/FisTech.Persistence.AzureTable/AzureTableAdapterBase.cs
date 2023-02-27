@@ -2,7 +2,6 @@
 
 public class AzureTableAdapterBase<TSource> where TSource : class, new()
 {
-    // TODO: Include/Ignore properties
     // TODO: Properties renaming
 
     // TODO: PartitionKey property value conversion

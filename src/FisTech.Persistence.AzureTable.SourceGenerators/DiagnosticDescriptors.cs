@@ -50,7 +50,7 @@ internal static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor PropertyNotFound = new("AZTBGEN005",
         "Property not found",
-        "Property not found for '{0}' on adapter class '{1}'",
+        "Property '{0}' not found for '{1}' on adapter class '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
     
     public static readonly DiagnosticDescriptor PropertyTypeMismatch = new("AZTBGEN006",
