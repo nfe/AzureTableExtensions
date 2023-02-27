@@ -568,7 +568,7 @@ public class AzureTableAdapterGeneratorTests
 
         await test.RunAsync();
     }
-    
+
     [Fact]
     public async Task Generator_NameChanges_ReturnsAdapter()
     {

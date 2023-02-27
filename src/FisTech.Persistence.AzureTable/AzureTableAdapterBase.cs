@@ -6,13 +6,13 @@ public class AzureTableAdapterBase<TSource> where TSource : class, new()
     // TODO: RowKey property value conversion
     // TODO: Timestamp property value conversion
     // TODO: ETag property value conversion
-    
+
     // TODO: Properties custom converters
-    
+
     // TODO: Unit tests
     // TODO: Integration tests
     // TODO: Add display name
-    
+
     // TODO: DateTime type value conversion
     // TODO: Decimal type value conversion
 
@@ -21,7 +21,7 @@ public class AzureTableAdapterBase<TSource> where TSource : class, new()
     // TODO: Auto convert unsupported types
 
     // TODO: Nested types support
-    
+
     // TODO: Samples
     // TODO: Documentation
 }

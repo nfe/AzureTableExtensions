@@ -35,6 +35,6 @@ public class AzureTableAdapterGeneratorTest : CSharpSourceGeneratorTest<AzureTab
                 // Non-nullable property must contain a non-null value when exiting constructor
                 { "CS8618", ReportDiagnostic.Suppress },
                 // Assuming assembly reference "Assembly Name #1" matches "Assembly Name #2"
-                { "CS1701", ReportDiagnostic.Suppress },
+                { "CS1701", ReportDiagnostic.Suppress }
             });
 }

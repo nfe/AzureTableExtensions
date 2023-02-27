@@ -359,15 +359,6 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         return GetPropertyFromAttribute(sourceTypeSymbol, attribute, out propertyName);
     }
 
-    private static IPropertySymbol? GetPropertyFromAttribute(INamedTypeSymbol adapterSymbol,
-        ITypeSymbol sourceTypeSymbol, string attributeName, out string? propertyName)
-    {
-        AttributeData? attribute = adapterSymbol.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
-
-        return GetPropertyFromAttribute(sourceTypeSymbol, attribute, out propertyName);
-    }
-
     private static IPropertySymbol? GetPropertyFromAttribute(ITypeSymbol sourceTypeSymbol, AttributeData? attribute,
         out string? propertyName)
     {

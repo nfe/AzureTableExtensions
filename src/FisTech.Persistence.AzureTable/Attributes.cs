@@ -11,7 +11,7 @@ public abstract class PropertyAttributeBase : Attribute
     public string SourcePropertyName { get; }
 }
 
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class)]
 public abstract class SchemaPropertyAttributeBase : PropertyAttributeBase
 {
     protected SchemaPropertyAttributeBase(string sourcePropertyName) : base(sourcePropertyName) { }
