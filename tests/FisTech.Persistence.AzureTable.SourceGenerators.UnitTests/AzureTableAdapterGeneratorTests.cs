@@ -71,7 +71,7 @@ public class AzureTableAdapterGeneratorTests
     }
 
     [Fact]
-    public async Task Generator_AllSchemaPropertiesModel_ReturnsAdapter()
+    public async Task Generator_AllSchemaProperties_ReturnsAdapter()
     {
         const string modelSource = """
             using System;
@@ -241,7 +241,7 @@ public class AzureTableAdapterGeneratorTests
     }
 
     [Fact]
-    public async Task Generator_AllSupportedTypesModel_ReturnsAdapter()
+    public async Task Generator_AllSupportedTypes_ReturnsAdapter()
     {
         const string modelSource = """
             using System;
@@ -416,6 +416,81 @@ public class AzureTableAdapterGeneratorTests
 
         await test.RunAsync();
     }
-    
-    // TODO: Properties access modifiers test
+
+    [Fact]
+    public async Task Generator_IgnoreNonPublicProperties_ReturnsAdapter()
+    {
+        const string modelSource = """
+            using System;
+
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public string MyPartitionKey { get; set; }
+
+                public string MyRowKey { get; set; }
+
+                internal string MyInternal { get; set; }
+
+                private string MyPrivate { get; set; }
+
+                private protected string MyPrivateProtected { get; set; }
+
+                protected string MyProtected { get; set; }
+
+                protected internal string MyProtectedInternal { get; set; }
+            }
+            """;
+
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(TestModel.MyPartitionKey))]
+            [RowKey(nameof(TestModel.MyRowKey))]
+            public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+            """;
+
+        const string expected = """
+            using Azure.Data.Tables;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
+            {
+                public ITableEntity Adapt(TestModel item)
+                {
+                    var entity = new TableEntity(item.MyPartitionKey, item.MyRowKey);
+
+                    return entity;
+                }
+
+                public TestModel Adapt(TableEntity entity) => new()
+                {
+                    MyPartitionKey = entity.PartitionKey,
+                    MyRowKey = entity.RowKey,
+                };
+            }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { modelSource, adapterSource },
+                GeneratedSources =
+                {
+                    (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
+                        SourceText.From(expected, Encoding.UTF8))
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
 }
