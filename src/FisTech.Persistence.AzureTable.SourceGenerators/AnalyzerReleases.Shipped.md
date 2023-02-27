@@ -12,4 +12,5 @@ Rule ID | Category | Severity | Notes
  AZTBGEN003 | Usage    | Error    | AZTBGEN003_InvalidGenericClass
  AZTBGEN004 | Usage    | Error    | AZTBGEN004_ClassIsNotPartial
  AZTBGEN005 | Usage    | Error    | AZTBGEN005_PropertyNotFound
- AZTBGEN006 | Usage    | Error    | AZTBGEN006_UnsupportedPropertyType
+ AZTBGEN006 | Usage    | Error    | AZTBGEN006_PropertyTypeMismatch
+ AZTBGEN007 | Usage    | Error    | AZTBGEN007_UnsupportedPropertyType
