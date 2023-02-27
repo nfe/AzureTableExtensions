@@ -568,4 +568,85 @@ public class AzureTableAdapterGeneratorTests
 
         await test.RunAsync();
     }
+    
+    [Fact]
+    public async Task Generator_NameChanges_ReturnsAdapter()
+    {
+        const string modelSource = """
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public string State { get; set; }
+
+                public string Country { get; set; }
+
+                public string Abbreviation { get; set; }
+
+                public string CapitalCity { get; set; }
+
+                public int Population { get; set; }
+            }
+            """;
+
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(TestModel.Country))]
+            [RowKey(nameof(TestModel.State))]
+            [NameChange(nameof(TestModel.Population), "Inhabitants")]
+            [NameChange(nameof(TestModel.Abbreviation), "Acronym")]
+            public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+            """;
+
+        const string expected = """
+            using Azure.Data.Tables;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
+            {
+                public ITableEntity Adapt(TestModel item)
+                {
+                    var entity = new TableEntity(item.Country, item.State)
+                    {
+                        { "Acronym", item.Abbreviation },
+                        { nameof(TestModel.CapitalCity), item.CapitalCity },
+                        { "Inhabitants", item.Population },
+                    };
+
+                    return entity;
+                }
+
+                public TestModel Adapt(TableEntity entity) => new()
+                {
+                    Country = entity.PartitionKey,
+                    State = entity.RowKey,
+                    Abbreviation = entity.GetString("Acronym"),
+                    CapitalCity = entity.GetString(nameof(TestModel.CapitalCity)),
+                    Population = entity.GetInt32("Inhabitants").GetValueOrDefault(),
+                };
+            }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { modelSource, adapterSource },
+                GeneratedSources =
+                {
+                    (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
+                        SourceText.From(expected, Encoding.UTF8))
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
 }

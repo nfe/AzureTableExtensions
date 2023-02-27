@@ -1,15 +1,17 @@
-﻿namespace FisTech.Persistence.AzureTable;
+﻿using System.Diagnostics.CodeAnalysis;
 
-[AttributeUsage(AttributeTargets.Class)]
-#pragma warning disable CA1710
+namespace FisTech.Persistence.AzureTable;
+
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+[SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix")]
 public abstract class PropertyAttributeBase : Attribute
-#pragma warning restore CA1710
 {
     protected PropertyAttributeBase(string sourcePropertyName) => SourcePropertyName = sourcePropertyName;
 
     public string SourcePropertyName { get; }
 }
 
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public abstract class SchemaPropertyAttributeBase : PropertyAttributeBase
 {
     protected SchemaPropertyAttributeBase(string sourcePropertyName) : base(sourcePropertyName) { }
@@ -37,8 +39,15 @@ public sealed class ETagAttribute : SchemaPropertyAttributeBase
     public ETagAttribute(string sourcePropertyName) : base(sourcePropertyName) { }
 }
 
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class IgnoreAttribute : PropertyAttributeBase
 {
     public IgnoreAttribute(string sourcePropertyName) : base(sourcePropertyName) { }
+}
+
+public sealed class NameChangeAttribute : PropertyAttributeBase
+{
+    public NameChangeAttribute(string sourcePropertyName, string targetName) : base(sourcePropertyName) =>
+        TargetName = targetName;
+
+    public string TargetName { get; }
 }

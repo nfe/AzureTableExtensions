@@ -13,3 +13,7 @@ Rule ID | Category | Severity | Notes
  AZTBGEN004 | Usage    | Error    | AZTBGEN004_PropertyNotFound
  AZTBGEN005 | Usage    | Error    | AZTBGEN005_PropertyTypeMismatch
  AZTBGEN006 | Usage    | Error    | AZTBGEN006_UnsupportedPropertyType
+ AZTBGEN007 | Usage    | Error    | AZTBGEN007_DuplicateNameChangeProperty
+ AZTBGEN008 | Usage    | Error    | AZTBGEN008_DuplicateNameChangeTargetName
+ AZTBGEN009 | Usage    | Error    | AZTBGEN009_NameChangeTargetNameConflict
+ AZTBGEN010 | Usage    | Error    | AZTBGEN010_InvalidNameChangeTargetName

@@ -79,12 +79,11 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         foreach (AttributeData ignoreAttribute in adapterSymbol.GetAttributes()
             .Where(a => a.AttributeClass?.Name == nameof(IgnoreAttribute)))
         {
-            IPropertySymbol? property = GetPropertyFromAttribute(sourceSymbol, ignoreAttribute,
-                out var ignorePropertyName);
+            IPropertySymbol? property = GetPropertyFromAttribute(sourceSymbol, ignoreAttribute, out var propertyName);
 
             if (property is null)
             {
-                ReportPropertyNotFound(ignorePropertyName, nameof(IgnoreAttribute));
+                ReportPropertyNotFound(propertyName, nameof(IgnoreAttribute));
                 return;
             }
 
@@ -107,6 +106,59 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             .Where(p => !ignoredProperties.Contains(p))
             .ToImmutableArray();
 
+        var nameChanges = new Dictionary<IPropertySymbol, string>(SymbolEqualityComparer.Default);
+
+        foreach (AttributeData nameChangeAttribute in adapterSymbol.GetAttributes()
+            .Where(a => a.AttributeClass?.Name == nameof(NameChangeAttribute)))
+        {
+            IPropertySymbol? property = GetPropertyFromAttribute(sourceSymbol, nameChangeAttribute,
+                out var propertyName);
+
+            if (property is null)
+            {
+                ReportPropertyNotFound(propertyName, nameof(NameChangeAttribute));
+                return;
+            }
+
+            if (nameChanges.ContainsKey(property))
+            {
+                ReportDuplicateNameChangeProperty(property.Name);
+                return;
+            }
+
+            if (nameChangeAttribute.ConstructorArguments[1].Value is not string targetName
+                || string.IsNullOrWhiteSpace(targetName))
+            {
+                ReportInvalidNameChangeTargetName(property.Name);
+                return;
+            }
+
+            if (nameChanges.ContainsValue(targetName))
+            {
+                ReportDuplicateNameChangeTargetName(targetName);
+                return;
+            }
+
+            nameChanges.Add(property, targetName);
+        }
+
+        KeyValuePair<IPropertySymbol, string> nameChangeTargetNameConflict = nameChanges.FirstOrDefault(n =>
+        {
+            IPropertySymbol? property = sourceProperties.FirstOrDefault(p => p.Name == n.Value);
+
+            if (property is null)
+                return false;
+
+            return !nameChanges.ContainsKey(property);
+        });
+
+        if (nameChangeTargetNameConflict.Key != default)
+        {
+            ReportNameChangeTargetNameConflict(nameChangeTargetNameConflict.Value);
+            return;
+        }
+
+        // TODO: Validate all source properties types are supported and segregate source generation
         var sourceTextBuilder = new StringBuilder();
 
         var usingStatements = new HashSet<string>(StringComparer.Ordinal)
@@ -151,8 +203,11 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                     return;
                 }
 
-                sourceTextBuilder.AppendLine(
-                    $$"""            { nameof({{sourceSymbol.Name}}.{{property.Name}}), {{setMethod}} },""");
+                var key = nameChanges.TryGetValue(property, out var targetName)
+                    ? $"\"{targetName}\""
+                    : $"nameof({sourceSymbol.Name}.{property.Name})";
+
+                sourceTextBuilder.AppendLine($$"""            { {{key}}, {{setMethod}} },""");
             }
 
             sourceTextBuilder.AppendLine("        };");
@@ -206,7 +261,11 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         foreach (IPropertySymbol property in sourceProperties)
         {
-            var getMethod = GetEntityGetMethod(property.Type, sourceSymbol.Name, property.Name);
+            var key = nameChanges.TryGetValue(property, out var targetName)
+                ? $"\"{targetName}\""
+                : $"nameof({sourceSymbol.Name}.{property.Name})";
+
+            var getMethod = GetEntityGetMethod(property.Type, key);
 
             if (getMethod is null)
             {
@@ -242,6 +301,22 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         void ReportUnsupportedPropertyType(IPropertySymbol propertySymbol) => context.ReportDiagnostic(
             Diagnostic.Create(DiagnosticDescriptors.UnsupportedPropertyType, adapterSymbol.Locations.FirstOrDefault(),
                 adapterSymbol.ToDisplayString(), propertySymbol.Type.ToDisplayString(), propertySymbol.Name));
+
+        void ReportDuplicateNameChangeProperty(string propertyName) => context.ReportDiagnostic(
+            Diagnostic.Create(DiagnosticDescriptors.DuplicateNameChangeProperty,
+                adapterSymbol.Locations.FirstOrDefault(), propertyName, adapterSymbol.ToDisplayString()));
+
+        void ReportInvalidNameChangeTargetName(string propertyName) => context.ReportDiagnostic(
+            Diagnostic.Create(DiagnosticDescriptors.InvalidNameChangeTargetName,
+                adapterSymbol.Locations.FirstOrDefault(), propertyName, adapterSymbol.ToDisplayString()));
+
+        void ReportDuplicateNameChangeTargetName(string targetName) => context.ReportDiagnostic(
+            Diagnostic.Create(DiagnosticDescriptors.DuplicateNameChangeTargetName,
+                adapterSymbol.Locations.FirstOrDefault(), targetName, adapterSymbol.ToDisplayString()));
+
+        void ReportNameChangeTargetNameConflict(string targetName) => context.ReportDiagnostic(
+            Diagnostic.Create(DiagnosticDescriptors.NameChangeTargetNameConflict,
+                adapterSymbol.Locations.FirstOrDefault(), targetName, adapterSymbol.ToDisplayString()));
     }
 
     private static bool IsValidAdapterClass(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol)
@@ -326,43 +401,42 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         };
     }
 
-    private static string? GetEntityGetMethod(ITypeSymbol typeSymbol, string sourceSymbolName, string propertyName)
+    private static string? GetEntityGetMethod(ITypeSymbol typeSymbol, string key)
     {
-        var property = $"nameof({sourceSymbolName}.{propertyName})";
         var typeName = typeSymbol.ToString();
 
         if (typeSymbol.TypeKind == TypeKind.Enum)
-            return $"({typeName})entity.GetInt32({property}).GetValueOrDefault()";
+            return $"({typeName})entity.GetInt32({key}).GetValueOrDefault()";
 
         if (typeSymbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsNullableTypeKind(TypeKind.Enum))
-            return $"({typeName})entity.GetInt32({property})";
+            return $"({typeName})entity.GetInt32({key})";
 
-        // TODO: Use symbol property instead of string literals
+        // TODO: Use symbol instead of string literals
         return typeName switch
         {
-            "char" => $"entity.GetString({property})[0]",
-            "char?" => $"entity.GetString({property})?[0]",
-            "string" or "string?" => $"entity.GetString({property})",
-            "bool" => $"entity.GetBoolean({property}).GetValueOrDefault()",
-            "bool?" => $"entity.GetBoolean({property})",
-            "byte" => $"(byte)entity.GetInt32({property}).GetValueOrDefault()",
-            "byte?" => $"(byte?)entity.GetInt32({property})",
-            "short" => $"(short)entity.GetInt32({property}).GetValueOrDefault()",
-            "short?" => $"(short?)entity.GetInt32({property})",
-            "int" => $"entity.GetInt32({property}).GetValueOrDefault()",
-            "int?" => $"entity.GetInt32({property})",
-            "long" => $"entity.GetInt64({property}).GetValueOrDefault()",
-            "long?" => $"entity.GetInt64({property})",
-            "float" => $"(float)entity.GetDouble({property}).GetValueOrDefault()",
-            "float?" => $"(float?)entity.GetDouble({property})",
-            "double" => $"entity.GetDouble({property}).GetValueOrDefault()",
-            "double?" => $"entity.GetDouble({property})",
-            "System.DateTimeOffset" => $"entity.GetDateTimeOffset({property}).GetValueOrDefault()",
-            "System.DateTimeOffset?" => $"entity.GetDateTimeOffset({property})",
-            "System.Guid" => $"entity.GetGuid({property}).GetValueOrDefault()",
-            "System.Guid?" => $"entity.GetGuid({property})",
-            "byte[]" => $"entity.GetBinary({property})",
-            "System.BinaryData" => $"entity.GetBinaryData({property})",
+            "char" => $"entity.GetString({key})[0]",
+            "char?" => $"entity.GetString({key})?[0]",
+            "string" or "string?" => $"entity.GetString({key})",
+            "bool" => $"entity.GetBoolean({key}).GetValueOrDefault()",
+            "bool?" => $"entity.GetBoolean({key})",
+            "byte" => $"(byte)entity.GetInt32({key}).GetValueOrDefault()",
+            "byte?" => $"(byte?)entity.GetInt32({key})",
+            "short" => $"(short)entity.GetInt32({key}).GetValueOrDefault()",
+            "short?" => $"(short?)entity.GetInt32({key})",
+            "int" => $"entity.GetInt32({key}).GetValueOrDefault()",
+            "int?" => $"entity.GetInt32({key})",
+            "long" => $"entity.GetInt64({key}).GetValueOrDefault()",
+            "long?" => $"entity.GetInt64({key})",
+            "float" => $"(float)entity.GetDouble({key}).GetValueOrDefault()",
+            "float?" => $"(float?)entity.GetDouble({key})",
+            "double" => $"entity.GetDouble({key}).GetValueOrDefault()",
+            "double?" => $"entity.GetDouble({key})",
+            "System.DateTimeOffset" => $"entity.GetDateTimeOffset({key}).GetValueOrDefault()",
+            "System.DateTimeOffset?" => $"entity.GetDateTimeOffset({key})",
+            "System.Guid" => $"entity.GetGuid({key}).GetValueOrDefault()",
+            "System.Guid?" => $"entity.GetGuid({key})",
+            "byte[]" => $"entity.GetBinary({key})",
+            "System.BinaryData" => $"entity.GetBinaryData({key})",
             _ => null
         };
     }

@@ -65,7 +65,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
         """;
 
     [Fact]
-    public async Task Generator_AbstractAdapterClass_ReturnsDiagnosticErrorAZTBGEN001()
+    public async Task Generator_InvalidAbstractClass_ReturnsDiagnosticErrorAZTBGEN001()
     {
         const string adapterSource = """
              using FisTech.Persistence.AzureTable;
@@ -98,7 +98,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     }
 
     [Fact]
-    public async Task Generator_GenericAdapterClass_ReturnsDiagnosticErrorAZTBGEN002()
+    public async Task Generator_InvalidGenericClass_ReturnsDiagnosticErrorAZTBGEN002()
     {
         const string adapterSource = """
              using FisTech.Persistence.AzureTable;
@@ -131,7 +131,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     }
 
     [Fact]
-    public async Task Generator_NonPartialAdapterClass_ReturnsDiagnosticErrorAZTBGEN003()
+    public async Task Generator_ClassIsNotPartial_ReturnsDiagnosticErrorAZTBGEN003()
     {
         const string adapterSource = """
              using FisTech.Persistence.AzureTable;
@@ -170,7 +170,7 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     [InlineData("[PartitionKey(nameof(Movie.Director))]", "RowKeyAttribute", "null")]
     // Nonexistent PartitionKeyAttribute
     [InlineData("[PartitionKey(\"MyProperty\")]", "PartitionKeyAttribute", "MyProperty")]
-    public async Task Generator_NonexistentPropertyAttribute_ReturnsDiagnosticErrorAZTBGEN004(string attributeSource,
+    public async Task Generator_PropertyNotFound_ReturnsDiagnosticErrorAZTBGEN004(string attributeSource,
         string attributeName, string propertyName)
     {
         var adapterSource = $$"""
@@ -312,6 +312,144 @@ public class AzureTableAdapterGeneratorDiagnosticTests
                         .WithLocation("/0/Test1.cs", 8, 22)
                         .WithMessage(
                             $"Adapter class 'TestNamespace.Adapters.TestModelAdapter' does not support type '{displayName ?? propertyType}' for property 'MyProperty'")
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task Generator_DuplicateNameChangeProperty_ReturnsDiagnosticErrorAZTBGEN007()
+    {
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(Movie.Director))]
+            [RowKey(nameof(Movie.Id))]
+            [NameChange(nameof(Movie.BoxOfficeRevenue), "Revenue")]
+            [NameChange(nameof(Movie.BoxOfficeRevenue), "Profit")]
+            public partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { ModelSource, adapterSource },
+                ExpectedDiagnostics =
+                {
+                    DiagnosticResult.CompilerError("AZTBGEN007")
+                        .WithSeverity(DiagnosticSeverity.Error)
+                        .WithLocation("/0/Test1.cs", 10, 22)
+                        .WithMessage(
+                            "Duplicate name change for property 'BoxOfficeRevenue' on adapter class 'TestNamespace.Adapters.MovieAdapter'")
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task Generator_DuplicateNameChangeTargetName_ReturnsDiagnosticErrorAZTBGEN008()
+    {
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(Movie.Director))]
+            [RowKey(nameof(Movie.Id))]
+            [NameChange(nameof(Movie.Budget), "FinancialPlan")]
+            [NameChange(nameof(Movie.BoxOfficeRevenue), "FinancialPlan")]
+            public partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { ModelSource, adapterSource },
+                ExpectedDiagnostics =
+                {
+                    DiagnosticResult.CompilerError("AZTBGEN008")
+                        .WithSeverity(DiagnosticSeverity.Error)
+                        .WithLocation("/0/Test1.cs", 10, 22)
+                        .WithMessage(
+                            "A name change with the same target 'FinancialPlan' has already been added on adapter class 'TestNamespace.Adapters.MovieAdapter'")
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task Generator_NameChangeTargetNameConflict_ReturnsDiagnosticErrorAZTBGEN009()
+    {
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(Movie.Director))]
+            [RowKey(nameof(Movie.Id))]
+            [NameChange(nameof(Movie.Budget), "BoxOfficeRevenue")]
+            public partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { ModelSource, adapterSource },
+                ExpectedDiagnostics =
+                {
+                    DiagnosticResult.CompilerError("AZTBGEN009")
+                        .WithSeverity(DiagnosticSeverity.Error)
+                        .WithLocation("/0/Test1.cs", 9, 22)
+                        .WithMessage(
+                            "The name change target 'BoxOfficeRevenue' conflicts with an existing property on adapter class 'TestNamespace.Adapters.MovieAdapter'")
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task Generator_InvalidNameChangeTargetName_ReturnsDiagnosticErrorAZTBGEN010()
+    {
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(Movie.Director))]
+            [RowKey(nameof(Movie.Id))]
+            [NameChange(nameof(Movie.Budget), "   ")]
+            public partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { ModelSource, adapterSource },
+                ExpectedDiagnostics =
+                {
+                    DiagnosticResult.CompilerError("AZTBGEN010")
+                        .WithSeverity(DiagnosticSeverity.Error)
+                        .WithLocation("/0/Test1.cs", 9, 22)
+                        .WithMessage(
+                            "Target name is not valid for property 'Budget' on adapter class 'TestNamespace.Adapters.MovieAdapter'")
                 }
             }
         };

@@ -27,6 +27,7 @@ internal static class DiagnosticDescriptors
     // @formatter:off
     
     // TODO: Create possible analyzers with code fix
+    // TODO: Use attribute span to determine the correct diagnostic location
 
     public static readonly DiagnosticDescriptor InvalidAbstractClass = new("AZTBGEN001",
         "Adapter class has abstract modifier", 
@@ -56,6 +57,26 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor UnsupportedPropertyType = new("AZTBGEN006",
         "Unsupported property type",
         "Adapter class '{0}' does not support type '{1}' for property '{2}'",
+        Categories.Usage, DiagnosticSeverity.Error, true);
+    
+    public static readonly DiagnosticDescriptor DuplicateNameChangeProperty = new("AZTBGEN007",
+        "Duplicate name change property",
+        "Duplicate name change for property '{0}' on adapter class '{1}'",
+        Categories.Usage, DiagnosticSeverity.Error, true);
+
+    public static readonly DiagnosticDescriptor DuplicateNameChangeTargetName = new("AZTBGEN008",
+        "Target name already exists",
+        "A name change with the same target '{0}' has already been added on adapter class '{1}'",
+        Categories.Usage, DiagnosticSeverity.Error, true);
+    
+    public static readonly DiagnosticDescriptor NameChangeTargetNameConflict = new("AZTBGEN009",
+        "Target name conflict",
+        "The name change target '{0}' conflicts with an existing property on adapter class '{1}'",
+        Categories.Usage, DiagnosticSeverity.Error, true);
+
+    public static readonly DiagnosticDescriptor InvalidNameChangeTargetName = new("AZTBGEN010",
+        "Invalid target name",
+        "Target name is not valid for property '{0}' on adapter class '{1}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     // @formatter:on
