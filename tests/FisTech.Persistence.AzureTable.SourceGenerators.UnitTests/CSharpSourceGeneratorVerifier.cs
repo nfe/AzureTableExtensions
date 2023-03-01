@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.Testing.Verifiers;
-using System.Reflection;
+using System.Collections.Immutable;
 
 namespace FisTech.Persistence.AzureTable.SourceGenerators.UnitTests;
 
@@ -11,18 +11,26 @@ public class AzureTableAdapterGeneratorTest : CSharpSourceGeneratorTest<AzureTab
 {
     public AzureTableAdapterGeneratorTest()
     {
-#if NET5_0
-        ReferenceAssemblies = ReferenceAssemblies.Net.Net50;
-#elif NET6_0
-        ReferenceAssemblies = ReferenceAssemblies.Net.Net60;
-#endif
+        ReferenceAssemblies =
+            DefaultReferenceAssemblies.WithPackages(
+                ImmutableArray.Create(new PackageIdentity("Azure.Data.Tables", "12.7.1")));
 
-        TestState.AdditionalReferences.Add(Assembly.Load("FisTech.Persistence.AzureTable"));
-        TestState.AdditionalReferences.Add(Assembly.Load("Azure.Data.Tables"));
-        TestState.AdditionalReferences.Add(Assembly.Load("Azure.Core"));
-        TestState.AdditionalReferences.Add(Assembly.Load("System.Memory.Data"));
+        TestState.AdditionalReferences.Add(
+            MetadataReference.CreateFromFile(typeof(AzureTableAdapterBase<>).Assembly.Location));
 
         CompilerDiagnostics = CompilerDiagnostics.All;
+    }
+
+    private static ReferenceAssemblies DefaultReferenceAssemblies
+    {
+        get
+        {
+#if NET5_0
+            return ReferenceAssemblies.Net.Net50;
+#elif NET6_0
+            return ReferenceAssemblies.Net.Net60;
+#endif
+        }
     }
 
     protected override CompilationOptions CreateCompilationOptions() =>

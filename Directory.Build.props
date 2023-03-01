@@ -9,6 +9,12 @@
         <AnalysisMode>All</AnalysisMode>
         <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+        
+        <!--
+        CA1014: Mark assemblies with CLSCompliantAttribute
+        CA1303: Do not pass literals as localized parameters
+        CA2007: Consider calling ConfigureAwait on the awaited task
+        -->
         <NoWarn>$(NoWarn);CA1014;CA1303;CA2007</NoWarn>
     </PropertyGroup>
 </Project>
