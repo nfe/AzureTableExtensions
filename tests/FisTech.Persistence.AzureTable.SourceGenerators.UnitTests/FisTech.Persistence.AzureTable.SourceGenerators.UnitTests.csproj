@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <!-- TODO: Add olders framework targets -->
-        <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
+        <TargetFramework>net6.0</TargetFramework>
 
         <!--
         NETSDK1138: The target framework is out of support (.et5.0)
