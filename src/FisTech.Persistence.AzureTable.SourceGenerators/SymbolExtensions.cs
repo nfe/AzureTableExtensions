@@ -37,11 +37,17 @@ internal static class SymbolExtensions
     public static bool IsNullableTypeKind(this INamedTypeSymbol namedTypeSymbol, TypeKind typeKind) =>
         namedTypeSymbol.OriginalDefinition.Name == "Nullable" && namedTypeSymbol.TypeArguments[0].TypeKind == typeKind;
 
+    public static IEnumerable<IMethodSymbol> GetMethods(this ITypeSymbol typeSymbol) =>
+        typeSymbol.GetMembers().Where(m => m is IMethodSymbol).Cast<IMethodSymbol>();
+
     public static IEnumerable<IPropertySymbol> GetInstancePublicProperties(this ITypeSymbol typeSymbol) => typeSymbol
         .GetMembers()
         .Where(m => m is IPropertySymbol { DeclaredAccessibility: Accessibility.Public, IsStatic: false })
         .Cast<IPropertySymbol>();
-
+    
     public static string GetNameWithoutArity(this Type type) =>
         !type.IsGenericType ? type.Name : type.Name.Substring(0, type.Name.IndexOf('`'));
+
+    public static Location? GetLocation(this AttributeData attributeData) =>
+        attributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation();
 }

@@ -71,7 +71,7 @@ public class AzureTableAdapterGeneratorTests
     }
 
     [Fact]
-    public async Task Generator_AllSchemaProperties_ReturnsAdapter()
+    public async Task Generator_SchemaProperties_ReturnsAdapter()
     {
         const string modelSource = """
             using System;
@@ -153,7 +153,7 @@ public class AzureTableAdapterGeneratorTests
     }
 
     [Fact]
-    public async Task Generator_AddSchemaSourceProperties_ReturnsAdapter()
+    public async Task Generator_DoNotIgnoreSchemaProperties_ReturnsAdapter()
     {
         const string modelSource = """
             using System;
@@ -199,10 +199,10 @@ public class AzureTableAdapterGeneratorTests
                 {
                     var entity = new TableEntity(item.MyPartitionKey, item.MyRowKey)
                     {
-                        { nameof(TestModel.MyPartitionKey), item.MyPartitionKey },
-                        { nameof(TestModel.MyRowKey), item.MyRowKey },
-                        { nameof(TestModel.MyTimestamp), item.MyTimestamp },
-                        { nameof(TestModel.MyETag), item.MyETag },
+                        { "MyPartitionKey", item.MyPartitionKey },
+                        { "MyRowKey", item.MyRowKey },
+                        { "MyTimestamp", item.MyTimestamp },
+                        { "MyETag", item.MyETag },
                     };
 
                     if (item.MyTimestamp != default)
@@ -216,10 +216,10 @@ public class AzureTableAdapterGeneratorTests
 
                 public TestModel Adapt(TableEntity entity) => new()
                 {
-                    MyPartitionKey = entity.GetString(nameof(TestModel.MyPartitionKey)),
-                    MyRowKey = entity.GetString(nameof(TestModel.MyRowKey)),
-                    MyTimestamp = entity.GetDateTimeOffset(nameof(TestModel.MyTimestamp)),
-                    MyETag = entity.GetString(nameof(TestModel.MyETag)),
+                    MyPartitionKey = entity.GetString("MyPartitionKey"),
+                    MyRowKey = entity.GetString("MyRowKey"),
+                    MyTimestamp = entity.GetDateTimeOffset("MyTimestamp"),
+                    MyETag = entity.GetString("MyETag"),
                 };
             }
             """;
@@ -241,7 +241,7 @@ public class AzureTableAdapterGeneratorTests
     }
 
     [Fact]
-    public async Task Generator_AllSupportedTypes_ReturnsAdapter()
+    public async Task Generator_SupportedTypes_ReturnsAdapter()
     {
         const string modelSource = """
             using System;
@@ -338,32 +338,32 @@ public class AzureTableAdapterGeneratorTests
                 {
                     var entity = new TableEntity(item.MyString, item.MyString)
                     {
-                        { nameof(TestModel.MyChar), item.MyChar.ToString() },
-                        { nameof(TestModel.MyNullableChar), item.MyNullableChar?.ToString() },
-                        { nameof(TestModel.MyString), item.MyString },
-                        { nameof(TestModel.MyNullableString), item.MyNullableString },
-                        { nameof(TestModel.MyBool), item.MyBool },
-                        { nameof(TestModel.MyNullableBool), item.MyNullableBool },
-                        { nameof(TestModel.MyByte), item.MyByte },
-                        { nameof(TestModel.MyNullableByte), item.MyNullableByte },
-                        { nameof(TestModel.MyShort), item.MyShort },
-                        { nameof(TestModel.MyNullableShort), item.MyNullableShort },
-                        { nameof(TestModel.MyInt), item.MyInt },
-                        { nameof(TestModel.MyNullableInt), item.MyNullableInt },
-                        { nameof(TestModel.MyLong), item.MyLong },
-                        { nameof(TestModel.MyNullableLong), item.MyNullableLong },
-                        { nameof(TestModel.MyFloat), item.MyFloat },
-                        { nameof(TestModel.MyNullableFloat), item.MyNullableFloat },
-                        { nameof(TestModel.MyDouble), item.MyDouble },
-                        { nameof(TestModel.MyNullableDouble), item.MyNullableDouble },
-                        { nameof(TestModel.MyDateTimeOffset), item.MyDateTimeOffset },
-                        { nameof(TestModel.MyNullableDateTimeOffset), item.MyNullableDateTimeOffset },
-                        { nameof(TestModel.MyGuid), item.MyGuid },
-                        { nameof(TestModel.MyNullableGuid), item.MyNullableGuid },
-                        { nameof(TestModel.MyEnum), (int)item.MyEnum },
-                        { nameof(TestModel.MyNullableEnum), (int?)item.MyNullableEnum },
-                        { nameof(TestModel.MyByteArray), item.MyByteArray },
-                        { nameof(TestModel.MyBinaryData), item.MyBinaryData },
+                        { "MyChar", item.MyChar.ToString() },
+                        { "MyNullableChar", item.MyNullableChar?.ToString() },
+                        { "MyString", item.MyString },
+                        { "MyNullableString", item.MyNullableString },
+                        { "MyBool", item.MyBool },
+                        { "MyNullableBool", item.MyNullableBool },
+                        { "MyByte", item.MyByte },
+                        { "MyNullableByte", item.MyNullableByte },
+                        { "MyShort", item.MyShort },
+                        { "MyNullableShort", item.MyNullableShort },
+                        { "MyInt", item.MyInt },
+                        { "MyNullableInt", item.MyNullableInt },
+                        { "MyLong", item.MyLong },
+                        { "MyNullableLong", item.MyNullableLong },
+                        { "MyFloat", item.MyFloat },
+                        { "MyNullableFloat", item.MyNullableFloat },
+                        { "MyDouble", item.MyDouble },
+                        { "MyNullableDouble", item.MyNullableDouble },
+                        { "MyDateTimeOffset", item.MyDateTimeOffset },
+                        { "MyNullableDateTimeOffset", item.MyNullableDateTimeOffset },
+                        { "MyGuid", item.MyGuid },
+                        { "MyNullableGuid", item.MyNullableGuid },
+                        { "MyEnum", (int)item.MyEnum },
+                        { "MyNullableEnum", (int?)item.MyNullableEnum },
+                        { "MyByteArray", item.MyByteArray },
+                        { "MyBinaryData", item.MyBinaryData },
                     };
 
                     return entity;
@@ -371,32 +371,32 @@ public class AzureTableAdapterGeneratorTests
 
                 public TestModel Adapt(TableEntity entity) => new()
                 {
-                    MyChar = entity.GetString(nameof(TestModel.MyChar))[0],
-                    MyNullableChar = entity.GetString(nameof(TestModel.MyNullableChar))?[0],
-                    MyString = entity.GetString(nameof(TestModel.MyString)),
-                    MyNullableString = entity.GetString(nameof(TestModel.MyNullableString)),
-                    MyBool = entity.GetBoolean(nameof(TestModel.MyBool)).GetValueOrDefault(),
-                    MyNullableBool = entity.GetBoolean(nameof(TestModel.MyNullableBool)),
-                    MyByte = (byte)entity.GetInt32(nameof(TestModel.MyByte)).GetValueOrDefault(),
-                    MyNullableByte = (byte?)entity.GetInt32(nameof(TestModel.MyNullableByte)),
-                    MyShort = (short)entity.GetInt32(nameof(TestModel.MyShort)).GetValueOrDefault(),
-                    MyNullableShort = (short?)entity.GetInt32(nameof(TestModel.MyNullableShort)),
-                    MyInt = entity.GetInt32(nameof(TestModel.MyInt)).GetValueOrDefault(),
-                    MyNullableInt = entity.GetInt32(nameof(TestModel.MyNullableInt)),
-                    MyLong = entity.GetInt64(nameof(TestModel.MyLong)).GetValueOrDefault(),
-                    MyNullableLong = entity.GetInt64(nameof(TestModel.MyNullableLong)),
-                    MyFloat = (float)entity.GetDouble(nameof(TestModel.MyFloat)).GetValueOrDefault(),
-                    MyNullableFloat = (float?)entity.GetDouble(nameof(TestModel.MyNullableFloat)),
-                    MyDouble = entity.GetDouble(nameof(TestModel.MyDouble)).GetValueOrDefault(),
-                    MyNullableDouble = entity.GetDouble(nameof(TestModel.MyNullableDouble)),
-                    MyDateTimeOffset = entity.GetDateTimeOffset(nameof(TestModel.MyDateTimeOffset)).GetValueOrDefault(),
-                    MyNullableDateTimeOffset = entity.GetDateTimeOffset(nameof(TestModel.MyNullableDateTimeOffset)),
-                    MyGuid = entity.GetGuid(nameof(TestModel.MyGuid)).GetValueOrDefault(),
-                    MyNullableGuid = entity.GetGuid(nameof(TestModel.MyNullableGuid)),
-                    MyEnum = (TestNamespace.Models.MyEnum)entity.GetInt32(nameof(TestModel.MyEnum)).GetValueOrDefault(),
-                    MyNullableEnum = (TestNamespace.Models.MyEnum?)entity.GetInt32(nameof(TestModel.MyNullableEnum)),
-                    MyByteArray = entity.GetBinary(nameof(TestModel.MyByteArray)),
-                    MyBinaryData = entity.GetBinaryData(nameof(TestModel.MyBinaryData)),
+                    MyChar = entity.GetString("MyChar")[0],
+                    MyNullableChar = entity.GetString("MyNullableChar")?[0],
+                    MyString = entity.GetString("MyString"),
+                    MyNullableString = entity.GetString("MyNullableString"),
+                    MyBool = entity.GetBoolean("MyBool").GetValueOrDefault(),
+                    MyNullableBool = entity.GetBoolean("MyNullableBool"),
+                    MyByte = (byte)entity.GetInt32("MyByte").GetValueOrDefault(),
+                    MyNullableByte = (byte?)entity.GetInt32("MyNullableByte"),
+                    MyShort = (short)entity.GetInt32("MyShort").GetValueOrDefault(),
+                    MyNullableShort = (short?)entity.GetInt32("MyNullableShort"),
+                    MyInt = entity.GetInt32("MyInt").GetValueOrDefault(),
+                    MyNullableInt = entity.GetInt32("MyNullableInt"),
+                    MyLong = entity.GetInt64("MyLong").GetValueOrDefault(),
+                    MyNullableLong = entity.GetInt64("MyNullableLong"),
+                    MyFloat = (float)entity.GetDouble("MyFloat").GetValueOrDefault(),
+                    MyNullableFloat = (float?)entity.GetDouble("MyNullableFloat"),
+                    MyDouble = entity.GetDouble("MyDouble").GetValueOrDefault(),
+                    MyNullableDouble = entity.GetDouble("MyNullableDouble"),
+                    MyDateTimeOffset = entity.GetDateTimeOffset("MyDateTimeOffset").GetValueOrDefault(),
+                    MyNullableDateTimeOffset = entity.GetDateTimeOffset("MyNullableDateTimeOffset"),
+                    MyGuid = entity.GetGuid("MyGuid").GetValueOrDefault(),
+                    MyNullableGuid = entity.GetGuid("MyNullableGuid"),
+                    MyEnum = (TestNamespace.Models.MyEnum)entity.GetInt32("MyEnum").GetValueOrDefault(),
+                    MyNullableEnum = (TestNamespace.Models.MyEnum?)entity.GetInt32("MyNullableEnum"),
+                    MyByteArray = entity.GetBinary("MyByteArray"),
+                    MyBinaryData = entity.GetBinaryData("MyBinaryData"),
                 };
             }
             """;
@@ -538,7 +538,7 @@ public class AzureTableAdapterGeneratorTests
                 {
                     var entity = new TableEntity(item.Country, item.State)
                     {
-                        { nameof(TestModel.CapitalCity), item.CapitalCity },
+                        { "CapitalCity", item.CapitalCity },
                     };
 
                     return entity;
@@ -548,7 +548,7 @@ public class AzureTableAdapterGeneratorTests
                 {
                     Country = entity.PartitionKey,
                     State = entity.RowKey,
-                    CapitalCity = entity.GetString(nameof(TestModel.CapitalCity)),
+                    CapitalCity = entity.GetString("CapitalCity"),
                 };
             }
             """;
@@ -586,6 +586,8 @@ public class AzureTableAdapterGeneratorTests
                 public string CapitalCity { get; set; }
 
                 public int Population { get; set; }
+
+                public float TotalArea { get; set; }
             }
             """;
 
@@ -599,6 +601,8 @@ public class AzureTableAdapterGeneratorTests
             [RowKey(nameof(TestModel.State))]
             [NameChange(nameof(TestModel.Population), "Inhabitants")]
             [NameChange(nameof(TestModel.Abbreviation), "Acronym")]
+            [Ignore(nameof(TestModel.TotalArea))]
+            [NameChange(nameof(TestModel.TotalArea), "TotalAreaKm")]
             public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
             """;
 
@@ -616,7 +620,7 @@ public class AzureTableAdapterGeneratorTests
                     var entity = new TableEntity(item.Country, item.State)
                     {
                         { "Acronym", item.Abbreviation },
-                        { nameof(TestModel.CapitalCity), item.CapitalCity },
+                        { "CapitalCity", item.CapitalCity },
                         { "Inhabitants", item.Population },
                     };
 
@@ -628,8 +632,177 @@ public class AzureTableAdapterGeneratorTests
                     Country = entity.PartitionKey,
                     State = entity.RowKey,
                     Abbreviation = entity.GetString("Acronym"),
-                    CapitalCity = entity.GetString(nameof(TestModel.CapitalCity)),
+                    CapitalCity = entity.GetString("CapitalCity"),
                     Population = entity.GetInt32("Inhabitants").GetValueOrDefault(),
+                };
+            }
+            """;
+
+        var test = new AzureTableAdapterGeneratorTest
+        {
+            TestState =
+            {
+                Sources = { modelSource, adapterSource },
+                GeneratedSources =
+                {
+                    (typeof(AzureTableAdapterGenerator), "TestModelAdapter.g.cs",
+                        SourceText.From(expected, Encoding.UTF8))
+                }
+            }
+        };
+
+        await test.RunAsync();
+    }
+    
+    [Fact]
+    public async Task Generator_Converters_ReturnsAdapter()
+    {
+        const string modelSource = """
+            namespace TestNamespace.Models;
+
+            public class TestModel
+            {
+                public string Country { get; set; }
+
+                public string State { get; set; }
+
+                public string StateAbbreviation { get; set; }
+
+                public int CityCode { get; set; }
+
+                public string City { get; set; }
+
+                public int Population { get; set; }
+
+                public Coordinates Coordinates { get; set; }
+
+                public float TotalAreaKm { get; set; }
+
+                public DateTimeOffset Epoch { get; set; }
+
+                public float? ETag { get; set; }
+            }
+
+            public struct Coordinates
+            {
+                public double Latitude { get; set; }
+
+                public double Longitude { get; set; }
+            }
+            """;
+
+        // TODO: Readonly model and entity for converter argument
+        const string adapterSource = """
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [Ignore(nameof(TestModel.TotalAreaKm))]
+            public partial class TestModelAdapter : AzureTableAdapterBase<TestModel>
+            {
+                private const float MileUnit = 0.621371f;
+
+                [PartitionKeyConvert(nameof(TestModel.Country), nameof(TestModel.State), nameof(TestModel.StateAbbreviation))]
+                private string SetPartitionKey(TestModel item) => $"{item.Country}:{item.StateAbbreviation}:{item.State}";
+
+                [RowKeyConvert(nameof(TestModel.CityCode), nameof(TestModel.City))]
+                private string SetRowKey(TestModel item) => $"{item.CityCode:000000}_{item.City}";
+
+                // Does not ignore source property
+                [TimestampConvert]
+                private DateTimeOffset? SetTimestamp(TestModel item) => item.Epoch is not default ? DateTimeOffset.FromUnixTimeSeconds(item.Epoch) : null;
+
+                [ETagConvert(nameof(TestModel.ETag))]
+                private string? SetETag(TestModel item) => item.ETag?.ToString();
+
+                [Convert(nameof(TestModel.Coordinates))]
+                private string SetCoordinates(TestModel item) => $"{item.Coordinates.Latitude:N6},{item.Coordinates.Longitude:N6}";
+
+                // Ignored property - does not generate assignment
+                // Convert kilometers to miles
+                [Convert(nameof(TestModel.TotalAreaKm))]
+                private float SetTotalArea(TestModel item) => item.TotalAreaKm * MileUnit;
+
+                [Convert("UnixTimestamp", nameof(TestModel.Epoch))]
+                private long SetEpoch(TestModel item) => item.Epoch.ToUnixTimeSeconds();
+
+                [ConvertBack(nameof(TestModel.Country))]
+                private string GetCountry(TableEntity entity) => entity.PartitionKey.Split(':')[0];
+
+                [ConvertBack(nameof(TestModel.State))]
+                private string GetState(TableEntity entity) => entity.PartitionKey.Split(':')[2];
+
+                [ConvertBack(nameof(TestModel.StateAbbreviation))]
+                private string GetStateAbbreviation(TableEntity entity) => entity.PartitionKey.Split(':')[1];
+
+                [ConvertBack(nameof(TestModel.CityCode))]
+                private int GetCityCode(TableEntity entity) => int.Parse(entity.RowKey.Split('_')[0]);
+
+                [ConvertBack(nameof(TestModel.City))]
+                private string GetCity(TableEntity entity) => entity.RowKey.Split('_')[1];
+
+                [ConvertBack(nameof(TestModel.Coordinates))]
+                private Coordinates GetCoordinates(TableEntity entity)
+                {
+                    var parts = entity.GetString(nameof(TestModel.Coordinates)).Split(',');
+                    return new Coordinates
+                    {
+                        Latitude = double.Parse(parts[0]),
+                        Longitude = double.Parse(parts[1]),
+                    };
+                }
+
+                [ConvertBack(nameof(TestModel.TotalAreaKm))]
+                private float GetTotalArea(TableEntity entity) => entity.GetFloat(nameof(TestModel.TotalAreaKm)) / MileUnit;
+
+                [ConvertBack(nameof(TestModel.Epoch))]
+                private DateTimeOffset GetEpoch(TableEntity entity) => DateTimeOffset.FromUnixTimeSeconds(entity.GetInt64(nameof(TestModel.Epoch)).GetValueOrDefault());
+
+                [ConvertBack(nameof(TestModel.ETag))]
+                private float? GetETag(TableEntity entity) => float.TryParse(entity.ETag, out var result) ? result : null;
+            }
+            """;
+
+        const string expected = """
+            using Azure.Data.Tables;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            public partial class TestModelAdapter : IAzureTableAdapter<TestModel>
+            {
+                public ITableEntity Adapt(TestModel item)
+                {
+                    var entity = new TableEntity(SetPartitionKey(item), SetRowKey(item))
+                    {
+                        { "Coordinates", SetCoordinates(item) },
+                        { "UnixTimestamp", SetEpoch(item) },
+                        { nameof(TestModel.Population), item.Population },
+                    };
+
+                    var timestamp = SetTimestamp(item);
+                    if (timestamp != default)
+                        entity.Timestamp = timestamp;
+
+                    var etag = SetETag(item);
+                    if (etag != default)
+                        entity.ETag = new ETag(etag);
+
+                    return entity;
+                }
+
+                public TestModel Adapt(TableEntity entity) => new()
+                {
+                    Country = GetCountry(entity),
+                    State = GetState(entity),
+                    CityCode = GetCityCode(entity),
+                    City = GetCity(entity),
+                    Population = entity.GetInt32(nameof(TestModel.Population)).GetValueOrDefault(),
+                    Coordinates = GetCoordinates(entity),
+                    Epoch = entity.GetInt64("UnixTimestamp").GetValueOrDefault(),
+                    ETag = GetETag(entity),
                 };
             }
             """;

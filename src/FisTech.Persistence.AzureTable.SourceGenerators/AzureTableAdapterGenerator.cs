@@ -7,158 +7,387 @@ namespace FisTech.Persistence.AzureTable.SourceGenerators;
 [Generator]
 public class AzureTableAdapterGenerator : ISourceGenerator
 {
+    private static readonly SymbolDisplayFormat s_defaultDisplayFormat =
+        new(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypes);
+
+    // TODO: Use symbol types instead of strings
+    private static readonly string[] s_supportedTypes =
+    {
+        "Char", "Char?", "String", "String?", "Boolean", "Boolean?", "Byte", "Byte?", "Int16", "Int16?", "Int32",
+        "Int32?", "Int64", "Int64?", "Single", "Single?", "Double", "Double?", "DateTime", "DateTime?",
+        "DateTimeOffset", "DateTimeOffset?", "Guid", "Guid?", "Byte[]", "BinaryData"
+    };
+
+    private GeneratorExecutionContext _executionContext;
+    private AdapterContext _adapterContext;
+
     public void Initialize(GeneratorInitializationContext context) { }
 
     public void Execute(GeneratorExecutionContext context)
     {
-        var adapterBaseTypeName = typeof(AzureTableAdapterBase<>).GetNameWithoutArity();
+        _executionContext = context;
 
-        foreach (INamedTypeSymbol? adapter in context.Compilation.Assembly.GlobalNamespace.DescendantTypeMembers(t =>
-            t.BaseType?.Name == adapterBaseTypeName && t.BaseType.IsGenericType && t.BaseType.Arity == 1))
-            GenerateAdapter(context, adapter);
+        IEnumerable<INamedTypeSymbol> adapters = context.Compilation.Assembly.GlobalNamespace.DescendantTypeMembers(t =>
+            t.BaseType is { Name: "AzureTableAdapterBase", IsGenericType: true, Arity: 1 });
+
+        foreach (INamedTypeSymbol adapter in adapters)
+            GenerateAdapter(adapter);
     }
 
-    private static void GenerateAdapter(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol)
+    private void GenerateAdapter(INamedTypeSymbol adapter)
     {
-        if (!IsValidAdapterClass(context, adapterSymbol))
+        _adapterContext = new AdapterContext(adapter);
+
+        if (!IsValidAdapterClass())
             return;
 
-        ITypeSymbol sourceSymbol = adapterSymbol.BaseType!.TypeArguments[0];
+        if (!TryConfigureAttributes())
+            return;
 
-        IPropertySymbol? partitionKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            nameof(PartitionKeyAttribute), out var partitionKeyPropertyName, out var ignorePartitionKeySourceProperty);
+        if (!TryConfigureConverters())
+            return;
 
-        if (partitionKeyProperty is null)
+        if (!TryConfigureProperties())
+            return;
+
+        if (!IsValidAdapterContext())
+            return;
+
+        GenerateSource();
+    }
+
+    private bool IsValidAdapterClass()
+    {
+        INamedTypeSymbol adapter = _adapterContext.Adapter;
+
+        if (adapter.IsAbstract)
         {
-            ReportPropertyNotFound(partitionKeyPropertyName, nameof(PartitionKeyAttribute));
-            return;
+            ReportClassError(DiagnosticDescriptors.InvalidAbstractClass);
+            return false;
         }
 
-        if (partitionKeyProperty.Type.ToString() is not "string")
+        if (adapter.IsGenericType)
         {
-            ReportPropertyTypeMismatch(nameof(PartitionKeyAttribute), "string");
-            return;
+            ReportClassError(DiagnosticDescriptors.InvalidGenericClass);
+            return false;
         }
 
-        IPropertySymbol? rowKeyProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            nameof(RowKeyAttribute), out var rowKeyPropertyName, out var ignoreRowKeySourceProperty);
-
-        if (rowKeyProperty is null)
+        if (!adapter.IsPartial())
         {
-            ReportPropertyNotFound(rowKeyPropertyName, nameof(RowKeyAttribute));
-            return;
+            ReportClassError(DiagnosticDescriptors.ClassIsNotPartial);
+            return false;
         }
 
-        if (rowKeyProperty.Type.ToString() is not "string")
+        return true;
+    }
+
+    private bool TryConfigureAttributes()
+    {
+        ImmutableArray<AttributeData> attributes = _adapterContext.Adapter.GetAttributes();
+
+        foreach (AttributeData attribute in attributes)
         {
-            ReportPropertyTypeMismatch(nameof(RowKeyAttribute), "string");
-            return;
-        }
-
-        IPropertySymbol? timestampProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            nameof(TimestampAttribute), out _, out var ignoreTimestampSourceProperty);
-
-        if (timestampProperty is not null
-            && timestampProperty.Type.ToString() is not "System.DateTimeOffset?" or "System.DateTimeOffset")
-        {
-            ReportPropertyTypeMismatch(nameof(TimestampAttribute), "System.DateTimeOffset? or System.DateTimeOffset");
-            return;
-        }
-
-        IPropertySymbol? eTagProperty = GetSchemaPropertyFromAttribute(adapterSymbol, sourceSymbol,
-            nameof(ETagAttribute), out _, out var ignoreETagSourceProperty);
-
-        if (eTagProperty is not null && eTagProperty.Type.ToString() is not "string?" or "string")
-        {
-            ReportPropertyTypeMismatch(nameof(ETagAttribute), "string? or string");
-            return;
-        }
-
-        var ignoredProperties = new HashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
-
-        foreach (AttributeData ignoreAttribute in adapterSymbol.GetAttributes()
-            .Where(a => a.AttributeClass?.Name == nameof(IgnoreAttribute)))
-        {
-            IPropertySymbol? property = GetPropertyFromAttribute(sourceSymbol, ignoreAttribute, out var propertyName);
-
-            if (property is null)
+            switch (attribute.AttributeClass?.Name)
             {
-                ReportPropertyNotFound(propertyName, nameof(IgnoreAttribute));
-                return;
-            }
+                case nameof(PartitionKeyAttribute):
+                    if (!TryConfigureSchemaProperty(nameof(ITableEntity.PartitionKey), attribute, new[] { "String" }))
+                        return false;
 
-            ignoredProperties.Add(property);
+                    break;
+
+                case nameof(RowKeyAttribute):
+                    if (!TryConfigureSchemaProperty(nameof(ITableEntity.RowKey), attribute, new[] { "String" }))
+                        return false;
+
+                    break;
+
+                case nameof(TimestampAttribute):
+                    if (!TryConfigureSchemaProperty(nameof(ITableEntity.Timestamp), attribute,
+                        new[] { "DateTimeOffset", "DateTimeOffset?" }))
+                        return false;
+
+                    break;
+
+                case nameof(ETagAttribute):
+                    if (!TryConfigureSchemaProperty(nameof(ITableEntity.ETag), attribute,
+                        new[] { "String", "String?" }))
+                        return false;
+
+                    break;
+
+                case nameof(IgnoreAttribute):
+                    if (!TryConfigureIgnoredProperty(attribute))
+                        return false;
+
+                    break;
+
+                case nameof(NameChangeAttribute):
+                    if (!TryConfigureNameChange(attribute))
+                        return false;
+
+                    break;
+
+                default:
+                    continue;
+            }
         }
 
-        if (ignorePartitionKeySourceProperty)
-            ignoredProperties.Add(partitionKeyProperty);
+        return true;
+    }
 
-        if (ignoreRowKeySourceProperty)
-            ignoredProperties.Add(rowKeyProperty);
-
-        if (timestampProperty is not null && ignoreTimestampSourceProperty)
-            ignoredProperties.Add(timestampProperty);
-
-        if (eTagProperty is not null && ignoreETagSourceProperty)
-            ignoredProperties.Add(eTagProperty);
-
-        ImmutableArray<IPropertySymbol> sourceProperties = sourceSymbol.GetInstancePublicProperties()
-            .Where(p => !ignoredProperties.Contains(p))
-            .ToImmutableArray();
-
-        var nameChanges = new Dictionary<IPropertySymbol, string>(SymbolEqualityComparer.Default);
-
-        foreach (AttributeData nameChangeAttribute in adapterSymbol.GetAttributes()
-            .Where(a => a.AttributeClass?.Name == nameof(NameChangeAttribute)))
+    private bool TryConfigureSchemaProperty(string schemaPropertyName, AttributeData attribute, string[] expectedTypes)
+    {
+        if (_adapterContext.SchemaPropertiesSetters.ContainsKey(schemaPropertyName))
         {
-            IPropertySymbol? property = GetPropertyFromAttribute(sourceSymbol, nameChangeAttribute,
-                out var propertyName);
-
-            if (property is null)
-            {
-                ReportPropertyNotFound(propertyName, nameof(NameChangeAttribute));
-                return;
-            }
-
-            if (nameChanges.ContainsKey(property))
-            {
-                ReportDuplicateNameChangeProperty(property.Name);
-                return;
-            }
-
-            if (nameChangeAttribute.ConstructorArguments[1].Value is not string targetName
-                || string.IsNullOrWhiteSpace(targetName))
-            {
-                ReportInvalidNameChangeTargetName(property.Name);
-                return;
-            }
-
-            if (nameChanges.ContainsValue(targetName))
-            {
-                ReportDuplicateNameChangeTargetName(targetName);
-                return;
-            }
-
-            nameChanges.Add(property, targetName);
+            ReportDuplicatedProperty(schemaPropertyName, attribute.GetLocation());
+            return false;
         }
 
-        KeyValuePair<IPropertySymbol, string> nameChangeTargetNameConflict = nameChanges.FirstOrDefault(n =>
-        {
-            IPropertySymbol? property = sourceProperties.FirstOrDefault(p => p.Name == n.Value);
+        if (!TryGetSchemaProperty(attribute, out IPropertySymbol property, out var ignoreSourceProperty))
+            return false;
 
-            if (property is null)
+        if (!expectedTypes.Contains(property.Type.ToDisplayString(s_defaultDisplayFormat)))
+        {
+            ReportPropertyTypeMismatch(schemaPropertyName, expectedTypes, attribute.GetLocation());
+            return false;
+        }
+
+        _adapterContext.SchemaPropertiesSetters.Add(schemaPropertyName, $"item.{property.Name}");
+
+        if (!ignoreSourceProperty)
+            return true;
+
+        var getter = $"entity.{schemaPropertyName}";
+
+        if (schemaPropertyName is nameof(ITableEntity.ETag))
+            getter += ".ToString()";
+
+        _adapterContext.Getters.Add(property.Name, getter);
+        _adapterContext.IgnoredProperties.Add(property.Name);
+
+        return true;
+    }
+
+    private bool TryGetSchemaProperty(AttributeData attribute, out IPropertySymbol property,
+        out bool ignoreSourceProperty)
+    {
+        property = null!;
+        ignoreSourceProperty = false;
+
+        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
+
+        if (!TryGetProperty(propertyName, attribute.GetLocation(), out property))
+            return false;
+
+        ignoreSourceProperty =
+            attribute?.NamedArguments
+                .FirstOrDefault(n => n.Key == nameof(SchemaPropertyAttributeBase.IgnoreSourceProperty))
+                .Value.Value is not (bool or true);
+
+        return true;
+    }
+
+    private bool TryGetProperty(string propertyName, Location? location, out IPropertySymbol property)
+    {
+        property = null!;
+
+        IPropertySymbol? prop = _adapterContext.Properties.FirstOrDefault(p => p.Name == propertyName);
+
+        if (prop is null)
+        {
+            ReportPropertyNotFound(propertyName, location);
+            return false;
+        }
+
+        property = prop;
+        return true;
+    }
+
+    private bool TryConfigureIgnoredProperty(AttributeData attribute)
+    {
+        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
+
+        if (!TryGetProperty(propertyName, attribute.GetLocation(), out IPropertySymbol property))
+            return false;
+
+        _adapterContext.IgnoredProperties.Add(property.Name);
+
+        return true;
+    }
+
+    private bool TryConfigureNameChange(AttributeData attribute)
+    {
+        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
+        var targetName = (string)attribute.ConstructorArguments[1].Value!;
+
+        if (!TryGetProperty(propertyName, attribute.GetLocation(), out IPropertySymbol property))
+            return false;
+
+        if (_adapterContext.NameChanges.ContainsKey(property.Name))
+        {
+            ReportDuplicatePropertyNameChange(property.Name, attribute.GetLocation());
+            return false;
+        }
+
+        _adapterContext.NameChanges.Add(property.Name, targetName);
+
+        return true;
+    }
+
+    private bool TryConfigureConverters()
+    {
+        ImmutableArray<IMethodSymbol> methods = _adapterContext.Adapter.GetMethods().ToImmutableArray();
+
+        foreach (IMethodSymbol method in methods) { }
+
+        return true;
+    }
+
+    private bool TryConfigureProperties()
+    {
+        IEnumerable<IPropertySymbol> properties =
+            _adapterContext.Properties.Where(p => !_adapterContext.IgnoredProperties.Contains(p.Name));
+
+        foreach (IPropertySymbol property in properties)
+        {
+            var targetName = _adapterContext.NameChanges.TryGetValue(property.Name, out var nameChange)
+                ? nameChange
+                : property.Name;
+
+            if (!TryConfigurePropertySetter(property, targetName))
                 return false;
 
-            return !nameChanges.ContainsKey(property);
-        });
-
-        if (nameChangeTargetNameConflict.Key != default)
-        {
-            ReportNameChangeTargetNameConflict(nameChangeTargetNameConflict.Value);
-            return;
+            if (!TryConfigurePropertyGetter(property, targetName))
+                return false;
         }
 
-        // TODO: Validate all source properties types are supported and segregate source generation
+        return true;
+    }
+
+    private bool TryConfigurePropertySetter(IPropertySymbol property, string targetName)
+    {
+        Location? location = property.Locations.FirstOrDefault();
+
+        if (_adapterContext.Setters.ContainsKey(targetName))
+        {
+            ReportDuplicatedProperty(targetName, location);
+            return false;
+        }
+
+        var setter = GetSetter(property.Type, property.Name);
+
+        if (setter is null)
+        {
+            ReportUnsupportedPropertyType(property.Type.Name, location);
+            return false;
+        }
+
+        _adapterContext.Setters.Add(targetName, setter);
+        return true;
+    }
+
+    private static string? GetSetter(ITypeSymbol propertyType, string propertyName)
+    {
+        if (propertyType.TypeKind == TypeKind.Enum)
+            return $"(int)item.{propertyName}";
+
+        if (propertyType is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsNullableTypeKind(TypeKind.Enum))
+            return $"(int?)item.{propertyName}";
+
+        var typeName = propertyType.ToDisplayString(s_defaultDisplayFormat);
+
+        return typeName switch
+        {
+            "Char" => $"item.{propertyName}.ToString()",
+            "Char?" => $"item.{propertyName}?.ToString()",
+            not null when s_supportedTypes.Contains(typeName) => $"item.{propertyName}",
+            _ => null
+        };
+    }
+
+    private bool TryConfigurePropertyGetter(IPropertySymbol property, string targetName)
+    {
+        Location? location = property.Locations.FirstOrDefault();
+
+        if (_adapterContext.Getters.ContainsKey(targetName))
+        {
+            ReportDuplicatedProperty(targetName, location);
+            return false;
+        }
+
+        var getter = GetGetter(property.Type, targetName);
+
+        if (getter is null)
+        {
+            ReportUnsupportedPropertyType(property.Type.Name, location);
+            return false;
+        }
+
+        _adapterContext.Getters.Add(property.Name, getter);
+        return true;
+    }
+
+    private static string? GetGetter(ITypeSymbol propertyType, string targetName)
+    {
+        var typeName = propertyType.ToDisplayString(new SymbolDisplayFormat(
+            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces));
+
+        if (propertyType.TypeKind == TypeKind.Enum)
+            return $"({typeName})entity.GetInt32(\"{targetName}\").GetValueOrDefault()";
+
+        if (propertyType is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsNullableTypeKind(TypeKind.Enum))
+            return $"({typeName})entity.GetInt32(\"{targetName}\")";
+
+        typeName = propertyType.ToDisplayString(s_defaultDisplayFormat);
+
+        return typeName switch
+        {
+            "Char" => $"entity.GetString(\"{targetName}\")[0]",
+            "Char?" => $"entity.GetString(\"{targetName}\")?[0]",
+            "String" or "String?" => $"entity.GetString(\"{targetName}\")",
+            "Boolean" => $"entity.GetBoolean(\"{targetName}\").GetValueOrDefault()",
+            "Boolean?" => $"entity.GetBoolean(\"{targetName}\")",
+            "Byte" => $"(byte)entity.GetInt32(\"{targetName}\").GetValueOrDefault()",
+            "Byte?" => $"(byte?)entity.GetInt32(\"{targetName}\")",
+            "Int16" => $"(short)entity.GetInt32(\"{targetName}\").GetValueOrDefault()",
+            "Int16?" => $"(short?)entity.GetInt32(\"{targetName}\")",
+            "Int32" => $"entity.GetInt32(\"{targetName}\").GetValueOrDefault()",
+            "Int32?" => $"entity.GetInt32(\"{targetName}\")",
+            "Int64" => $"entity.GetInt64(\"{targetName}\").GetValueOrDefault()",
+            "Int64?" => $"entity.GetInt64(\"{targetName}\")",
+            "Single" => $"(float)entity.GetDouble(\"{targetName}\").GetValueOrDefault()",
+            "Single?" => $"(float?)entity.GetDouble(\"{targetName}\")",
+            "Double" => $"entity.GetDouble(\"{targetName}\").GetValueOrDefault()",
+            "Double?" => $"entity.GetDouble(\"{targetName}\")",
+            "DateTimeOffset" => $"entity.GetDateTimeOffset(\"{targetName}\").GetValueOrDefault()",
+            "DateTimeOffset?" => $"entity.GetDateTimeOffset(\"{targetName}\")",
+            "Guid" => $"entity.GetGuid(\"{targetName}\").GetValueOrDefault()",
+            "Guid?" => $"entity.GetGuid(\"{targetName}\")",
+            "Byte[]" => $"entity.GetBinary(\"{targetName}\")",
+            "BinaryData" => $"entity.GetBinaryData(\"{targetName}\")",
+            _ => null
+        };
+    }
+
+    private bool IsValidAdapterContext()
+    {
+        if (!_adapterContext.SchemaPropertiesSetters.ContainsKey(nameof(ITableEntity.PartitionKey)))
+        {
+            ReportRequiredPropertyNotFound(nameof(ITableEntity.PartitionKey));
+            return false;
+        }
+
+        if (!_adapterContext.SchemaPropertiesSetters.ContainsKey(nameof(ITableEntity.RowKey)))
+        {
+            ReportRequiredPropertyNotFound(nameof(ITableEntity.RowKey));
+            return false;
+        }
+
+        return true;
+    }
+
+    private void GenerateSource()
+    {
         var sourceTextBuilder = new StringBuilder();
 
         var usingStatements = new HashSet<string>(StringComparer.Ordinal)
@@ -166,269 +395,172 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             typeof(ITableEntity).Namespace,
             typeof(TableEntity).Namespace,
             typeof(IAzureTableAdapter<>).Namespace,
-            sourceSymbol.ContainingNamespace.ToDisplayString()
+            _adapterContext.ItemType.ContainingNamespace.ToDisplayString()
         };
 
-        // Class declaration
+        GenerateClassDeclaration();
 
-        sourceTextBuilder.AppendLine($$"""
-            
-            namespace {{adapterSymbol.ContainingNamespace.ToDisplayString()}};
-            
-            public partial class {{adapterSymbol.Name}} : {{typeof(IAzureTableAdapter<>).GetNameWithoutArity()}}<{{sourceSymbol.Name}}>
-            {
-            """);
+        GenerateItemToEntityAdapter();
 
-        // Item to entity adapt method
+        GenerateEntityToItemAdapter();
 
-        sourceTextBuilder.Append($$"""    
-                public {{nameof(ITableEntity)}} Adapt({{sourceSymbol.Name}} item)
-                {
-                    var entity = new {{nameof(TableEntity)}}(item.{{partitionKeyProperty.Name}}, item.{{rowKeyProperty.Name}})
-            """);
+        GenerateUsingStatements();
 
-        if (sourceProperties.Length == 0)
-            sourceTextBuilder.AppendLine(";");
-        else
+        var sourceText = sourceTextBuilder.ToString();
+
+        _executionContext.AddSource($"{_adapterContext.Adapter.Name}.g.cs", SourceText.From(sourceText, Encoding.UTF8));
+
+        void GenerateClassDeclaration()
         {
-            sourceTextBuilder.AppendLine("\r\n        {");
+            sourceTextBuilder.AppendLine($$"""
 
-            foreach (IPropertySymbol property in sourceProperties)
+            namespace {{_adapterContext.Adapter.ContainingNamespace.ToDisplayString()}};
+
+            public partial class {{_adapterContext.Adapter.Name}} : IAzureTableAdapter<{{_adapterContext.ItemType.Name}}>
             {
-                var setMethod = GetEntitySetMethod(property.Type, property.Name);
+            """);
+        }
 
-                if (setMethod is null)
+        void GenerateItemToEntityAdapter()
+        {
+            var partitionKeySetter = _adapterContext.SchemaPropertiesSetters[nameof(ITableEntity.PartitionKey)];
+            var rowKeySetter = _adapterContext.SchemaPropertiesSetters[nameof(ITableEntity.RowKey)];
+
+            sourceTextBuilder.Append($$"""
+                public ITableEntity Adapt({{_adapterContext.ItemType.Name}} item)
                 {
-                    ReportUnsupportedPropertyType(property);
-                    return;
-                }
+                    var entity = new TableEntity({{partitionKeySetter}}, {{rowKeySetter}})
+            """);
 
-                var key = nameChanges.TryGetValue(property, out var targetName)
-                    ? $"\"{targetName}\""
-                    : $"nameof({sourceSymbol.Name}.{property.Name})";
+            if (_adapterContext.Setters.Count == 0)
+                sourceTextBuilder.AppendLine(";");
+            else
+            {
+                sourceTextBuilder.AppendLine("\r\n        {");
 
-                sourceTextBuilder.AppendLine($$"""            { {{key}}, {{setMethod}} },""");
+                foreach (KeyValuePair<string, string> setter in _adapterContext.Setters)
+                    sourceTextBuilder.AppendLine($$"""
+                                { "{{setter.Key}}", {{setter.Value}} },
+                    """);
+
+                sourceTextBuilder.AppendLine("        };");
             }
 
-            sourceTextBuilder.AppendLine("        };");
-        }
+            if (_adapterContext.SchemaPropertiesSetters.TryGetValue(nameof(ITableEntity.Timestamp),
+                    out var timestampSetter))
+                // Apply default comparison to avoid unnecessary serialization
+                sourceTextBuilder.AppendLine($$"""
 
-        if (timestampProperty is not null)
-            // Apply default comparison to avoid unnecessary serialization
-            sourceTextBuilder.AppendLine($$"""
-
-                        if (item.{{timestampProperty.Name}} != default)
-                            entity.Timestamp = item.{{timestampProperty.Name}};
+                        if ({{timestampSetter}} != default)
+                            entity.Timestamp = {{timestampSetter}};
                 """);
 
-        if (eTagProperty is not null)
-        {
-            usingStatements.Add(typeof(ETag).Namespace);
+            if (_adapterContext.SchemaPropertiesSetters.TryGetValue(nameof(ITableEntity.ETag), out var etagSetter))
+            {
+                usingStatements.Add(typeof(ETag).Namespace);
 
-            // Apply default comparison to avoid unnecessary serialization
-            sourceTextBuilder.AppendLine($$"""
+                // Apply default comparison to avoid unnecessary serialization
+                sourceTextBuilder.AppendLine($$"""
 
-                        if (item.{{eTagProperty.Name}} != default)
-                            entity.ETag = new ETag(item.{{eTagProperty.Name}});
+                        if ({{etagSetter}} != default)
+                            entity.ETag = new ETag({{etagSetter}});
                 """);
-        }
+            }
 
-        sourceTextBuilder.AppendLine("""
+            sourceTextBuilder.AppendLine("""
 
                     return entity;
                 }
             """);
+        }
 
-        // Entity to item adapt method
+        void GenerateEntityToItemAdapter()
+        {
+            sourceTextBuilder.AppendLine($$"""
 
-        sourceTextBuilder.AppendLine($$"""
-
-                public {{sourceSymbol.Name}} Adapt({{nameof(TableEntity)}} entity) => new()
+                public {{_adapterContext.ItemType.Name}} Adapt(TableEntity entity) => new()
                 {
             """);
 
-        if (ignorePartitionKeySourceProperty)
-            sourceTextBuilder.AppendLine($$"""        {{partitionKeyProperty.Name}} = entity.PartitionKey,""");
+            foreach (KeyValuePair<string, string> getter in _adapterContext.Getters)
+                sourceTextBuilder.AppendLine($$"""
+                        {{getter.Key}} = {{getter.Value}},
+                """);
 
-        if (ignoreRowKeySourceProperty)
-            sourceTextBuilder.AppendLine($$"""        {{rowKeyProperty.Name}} = entity.RowKey,""");
-
-        if (timestampProperty is not null && ignoreTimestampSourceProperty)
-            sourceTextBuilder.AppendLine($$"""        {{timestampProperty.Name}} = entity.Timestamp,""");
-
-        if (eTagProperty is not null && ignoreETagSourceProperty)
-            sourceTextBuilder.AppendLine($$"""        {{eTagProperty.Name}} = entity.ETag.ToString(),""");
-
-        foreach (IPropertySymbol property in sourceProperties)
-        {
-            var key = nameChanges.TryGetValue(property, out var targetName)
-                ? $"\"{targetName}\""
-                : $"nameof({sourceSymbol.Name}.{property.Name})";
-
-            var getMethod = GetEntityGetMethod(property.Type, key);
-
-            if (getMethod is null)
-            {
-                ReportUnsupportedPropertyType(property);
-                return;
-            }
-
-            sourceTextBuilder.AppendLine($$"""        {{property.Name}} = {{getMethod}},""");
-        }
-
-        sourceTextBuilder.Append("""
+            sourceTextBuilder.Append("""
                 };
             }
             """);
-
-        // Using statements
-
-        foreach (var statement in usingStatements.OrderByDescending(s => s))
-            sourceTextBuilder.Insert(0, $"using {statement};\r\n");
-
-        var sourceText = sourceTextBuilder.ToString();
-
-        context.AddSource($"{adapterSymbol.Name}.g.cs", SourceText.From(sourceText, Encoding.UTF8));
-
-        void ReportPropertyNotFound(string? propertyName, string attributeName) => context.ReportDiagnostic(
-            Diagnostic.Create(DiagnosticDescriptors.PropertyNotFound, adapterSymbol.Locations.FirstOrDefault(),
-                propertyName ?? "null", attributeName, adapterSymbol.ToDisplayString()));
-
-        void ReportPropertyTypeMismatch(string attributeName, string expectedType) => context.ReportDiagnostic(
-            Diagnostic.Create(DiagnosticDescriptors.PropertyTypeMismatch, adapterSymbol.Locations.FirstOrDefault(),
-                attributeName, expectedType, adapterSymbol.ToDisplayString()));
-
-        void ReportUnsupportedPropertyType(IPropertySymbol propertySymbol) => context.ReportDiagnostic(
-            Diagnostic.Create(DiagnosticDescriptors.UnsupportedPropertyType, adapterSymbol.Locations.FirstOrDefault(),
-                adapterSymbol.ToDisplayString(), propertySymbol.Type.ToDisplayString(), propertySymbol.Name));
-
-        void ReportDuplicateNameChangeProperty(string propertyName) => context.ReportDiagnostic(
-            Diagnostic.Create(DiagnosticDescriptors.DuplicateNameChangeProperty,
-                adapterSymbol.Locations.FirstOrDefault(), propertyName, adapterSymbol.ToDisplayString()));
-
-        void ReportInvalidNameChangeTargetName(string propertyName) => context.ReportDiagnostic(
-            Diagnostic.Create(DiagnosticDescriptors.InvalidNameChangeTargetName,
-                adapterSymbol.Locations.FirstOrDefault(), propertyName, adapterSymbol.ToDisplayString()));
-
-        void ReportDuplicateNameChangeTargetName(string targetName) => context.ReportDiagnostic(
-            Diagnostic.Create(DiagnosticDescriptors.DuplicateNameChangeTargetName,
-                adapterSymbol.Locations.FirstOrDefault(), targetName, adapterSymbol.ToDisplayString()));
-
-        void ReportNameChangeTargetNameConflict(string targetName) => context.ReportDiagnostic(
-            Diagnostic.Create(DiagnosticDescriptors.NameChangeTargetNameConflict,
-                adapterSymbol.Locations.FirstOrDefault(), targetName, adapterSymbol.ToDisplayString()));
-    }
-
-    private static bool IsValidAdapterClass(GeneratorExecutionContext context, INamedTypeSymbol adapterSymbol)
-    {
-        if (adapterSymbol.IsAbstract)
-        {
-            ReportClassError(DiagnosticDescriptors.InvalidAbstractClass);
-            return false;
         }
 
-        if (adapterSymbol.IsGenericType)
+        void GenerateUsingStatements()
         {
-            ReportClassError(DiagnosticDescriptors.InvalidGenericClass);
-            return false;
+            foreach (var statement in usingStatements.OrderByDescending(s => s))
+                sourceTextBuilder.Insert(0, $"using {statement};\r\n");
+        }
+    }
+
+    private void ReportClassError(DiagnosticDescriptor descriptor) => _executionContext.ReportDiagnostic(
+        Diagnostic.Create(descriptor, _adapterContext.Location, _adapterContext.DisplayString));
+
+    private void ReportRequiredPropertyNotFound(string propertyName) => _executionContext.ReportDiagnostic(
+        Diagnostic.Create(DiagnosticDescriptors.RequiredPropertyNotFound, _adapterContext.Location, propertyName,
+            _adapterContext.DisplayString));
+
+    private void ReportDuplicatedProperty(string propertyName, Location? location) =>
+        _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.DuplicateProperty,
+            location ?? _adapterContext.Location, propertyName, _adapterContext.DisplayString));
+
+    private void ReportPropertyNotFound(string propertyName, Location? location) => _executionContext.ReportDiagnostic(
+        Diagnostic.Create(DiagnosticDescriptors.PropertyNotFound, location ?? _adapterContext.Location, propertyName,
+            _adapterContext.DisplayString));
+
+    private void ReportPropertyTypeMismatch(string propertyName, string[] expectedTypes, Location? location) =>
+        _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.PropertyTypeMismatch,
+            location ?? _adapterContext.Location, propertyName, string.Join(" or ", expectedTypes),
+            _adapterContext.DisplayString));
+
+    private void ReportUnsupportedPropertyType(string actualType, Location? location) =>
+        _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.UnsupportedPropertyType,
+            location ?? _adapterContext.Location, actualType, _adapterContext.DisplayString));
+
+    private void ReportConverterSignatureMismatch(Location location) => _executionContext.ReportDiagnostic(
+        Diagnostic.Create(DiagnosticDescriptors.ConverterSignatureMismatch, location,
+            _adapterContext.ItemType.ToDisplayString(), _adapterContext.DisplayString));
+
+    private void ReportDuplicatePropertyNameChange(string propertyName, Location? location) =>
+        _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.DuplicatePropertyNameChange,
+            location, propertyName, _adapterContext.DisplayString));
+
+    private struct AdapterContext
+    {
+        public AdapterContext(INamedTypeSymbol adapter)
+        {
+            Adapter = adapter;
+            Location = Adapter.Locations.First();
+            DisplayString = Adapter.ToDisplayString();
+            ItemType = Adapter.BaseType!.TypeArguments[0];
+            Properties = ItemType.GetInstancePublicProperties().ToImmutableArray();
         }
 
-        if (!adapterSymbol.IsPartial())
-        {
-            ReportClassError(DiagnosticDescriptors.ClassIsNotPartial);
-            return false;
-        }
+        public INamedTypeSymbol Adapter { get; }
 
-        return true;
+        public Location Location { get; }
 
-        void ReportClassError(DiagnosticDescriptor descriptor) => context.ReportDiagnostic(Diagnostic.Create(descriptor,
-            adapterSymbol.Locations.FirstOrDefault(), adapterSymbol.ToDisplayString()));
-    }
+        public string DisplayString { get; }
 
-    private static IPropertySymbol? GetSchemaPropertyFromAttribute(INamedTypeSymbol adapterSymbol,
-        ITypeSymbol sourceTypeSymbol, string attributeName, out string? propertyName, out bool ignoreSourceProperty)
-    {
-        AttributeData? attribute = adapterSymbol.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.Name == attributeName);
+        public ITypeSymbol ItemType { get; }
 
-        ignoreSourceProperty =
-            attribute?.NamedArguments
-                .FirstOrDefault(n => n.Key == nameof(SchemaPropertyAttributeBase.IgnoreSourceProperty))
-                .Value.Value is not (bool or true);
+        public Dictionary<string, string> SchemaPropertiesSetters { get; } = new(StringComparer.Ordinal);
 
-        return GetPropertyFromAttribute(sourceTypeSymbol, attribute, out propertyName);
-    }
+        public ImmutableArray<IPropertySymbol> Properties { get; }
 
-    private static IPropertySymbol? GetPropertyFromAttribute(ITypeSymbol sourceTypeSymbol, AttributeData? attribute,
-        out string? propertyName)
-    {
-        var sourcePropertyName = attribute?.ConstructorArguments[0].Value as string;
-        propertyName = sourcePropertyName;
+        public Dictionary<string, string> Setters { get; } = new(StringComparer.Ordinal);
 
-        return sourcePropertyName is not null
-            ? sourceTypeSymbol.GetInstancePublicProperties().FirstOrDefault(p => p.Name == sourcePropertyName)
-            : null;
-    }
+        public Dictionary<string, string> Getters { get; } = new(StringComparer.Ordinal);
 
-    private static string? GetEntitySetMethod(ITypeSymbol typeSymbol, string propertyName)
-    {
-        if (typeSymbol.TypeKind == TypeKind.Enum)
-            return $"(int)item.{propertyName}";
+        public HashSet<string> IgnoredProperties { get; } = new(StringComparer.Ordinal);
 
-        if (typeSymbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsNullableTypeKind(TypeKind.Enum))
-            return $"(int?)item.{propertyName}";
-
-        var typeName = typeSymbol.ToString();
-
-        return typeName switch
-        {
-            "char" => $"item.{propertyName}.ToString()",
-            "char?" => $"item.{propertyName}?.ToString()",
-            "string" or "string?" or "bool" or "bool?" or "byte" or "byte?" or "short" or "short?" or "int" or "int?"
-                or "long" or "long?" or "float" or "float?" or "double" or "double?" or "System.DateTime"
-                or "System.DateTime?" or "System.DateTimeOffset" or "System.DateTimeOffset?" or "System.Guid"
-                or "System.Guid?" or "byte[]" or "System.BinaryData" => $"item.{propertyName}",
-            _ => null
-        };
-    }
-
-    private static string? GetEntityGetMethod(ITypeSymbol typeSymbol, string key)
-    {
-        var typeName = typeSymbol.ToString();
-
-        if (typeSymbol.TypeKind == TypeKind.Enum)
-            return $"({typeName})entity.GetInt32({key}).GetValueOrDefault()";
-
-        if (typeSymbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsNullableTypeKind(TypeKind.Enum))
-            return $"({typeName})entity.GetInt32({key})";
-
-        // TODO: Use symbol instead of string literals
-        return typeName switch
-        {
-            "char" => $"entity.GetString({key})[0]",
-            "char?" => $"entity.GetString({key})?[0]",
-            "string" or "string?" => $"entity.GetString({key})",
-            "bool" => $"entity.GetBoolean({key}).GetValueOrDefault()",
-            "bool?" => $"entity.GetBoolean({key})",
-            "byte" => $"(byte)entity.GetInt32({key}).GetValueOrDefault()",
-            "byte?" => $"(byte?)entity.GetInt32({key})",
-            "short" => $"(short)entity.GetInt32({key}).GetValueOrDefault()",
-            "short?" => $"(short?)entity.GetInt32({key})",
-            "int" => $"entity.GetInt32({key}).GetValueOrDefault()",
-            "int?" => $"entity.GetInt32({key})",
-            "long" => $"entity.GetInt64({key}).GetValueOrDefault()",
-            "long?" => $"entity.GetInt64({key})",
-            "float" => $"(float)entity.GetDouble({key}).GetValueOrDefault()",
-            "float?" => $"(float?)entity.GetDouble({key})",
-            "double" => $"entity.GetDouble({key}).GetValueOrDefault()",
-            "double?" => $"entity.GetDouble({key})",
-            "System.DateTimeOffset" => $"entity.GetDateTimeOffset({key}).GetValueOrDefault()",
-            "System.DateTimeOffset?" => $"entity.GetDateTimeOffset({key})",
-            "System.Guid" => $"entity.GetGuid({key}).GetValueOrDefault()",
-            "System.Guid?" => $"entity.GetGuid({key})",
-            "byte[]" => $"entity.GetBinary({key})",
-            "System.BinaryData" => $"entity.GetBinaryData({key})",
-            _ => null
-        };
+        public Dictionary<string, string> NameChanges { get; } = new(StringComparer.Ordinal);
     }
 }

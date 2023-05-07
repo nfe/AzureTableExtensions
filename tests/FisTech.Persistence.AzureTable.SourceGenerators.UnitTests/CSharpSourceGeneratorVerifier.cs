@@ -13,7 +13,7 @@ public class AzureTableAdapterGeneratorTest : CSharpSourceGeneratorTest<AzureTab
     {
         ReferenceAssemblies =
             DefaultReferenceAssemblies.WithPackages(
-                ImmutableArray.Create(new PackageIdentity("Azure.Data.Tables", "12.7.1")));
+                ImmutableArray.Create(new PackageIdentity("Azure.Data.Tables", "12.8.0")));
 
         TestState.AdditionalReferences.Add(
             MetadataReference.CreateFromFile(typeof(AzureTableAdapterBase<>).Assembly.Location));
