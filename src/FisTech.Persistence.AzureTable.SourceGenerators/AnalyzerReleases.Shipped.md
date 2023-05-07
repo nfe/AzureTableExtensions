@@ -10,10 +10,11 @@ Rule ID | Category | Severity | Notes
  AZTBGEN001 | Usage    | Error    | AZTBGEN001_InvalidAbstractClass
  AZTBGEN002 | Usage    | Error    | AZTBGEN002_InvalidGenericClass
  AZTBGEN003 | Usage    | Error    | AZTBGEN003_ClassIsNotPartial
- AZTBGEN004 | Usage    | Error    | AZTBGEN004_PropertyNotFound
- AZTBGEN005 | Usage    | Error    | AZTBGEN005_PropertyTypeMismatch
- AZTBGEN006 | Usage    | Error    | AZTBGEN006_UnsupportedPropertyType
- AZTBGEN007 | Usage    | Error    | AZTBGEN007_DuplicateNameChangeProperty
- AZTBGEN008 | Usage    | Error    | AZTBGEN008_DuplicateNameChangeTargetName
- AZTBGEN009 | Usage    | Error    | AZTBGEN009_NameChangeTargetNameConflict
- AZTBGEN010 | Usage    | Error    | AZTBGEN010_InvalidNameChangeTargetName
+ AZTBGEN004 | Usage    | Error    | AZTBGEN004_RequiredPropertyNotFound
+ AZTBGEN005 | Usage    | Error    | AZTBGEN005_PropertyNotFound
+ AZTBGEN006 | Usage    | Error    | AZTBGEN006_DuplicateProperty
+ AZTBGEN007 | Usage    | Error    | AZTBGEN007_PropertyTypeMismatch
+ AZTBGEN008 | Usage    | Error    | AZTBGEN008_UnsupportedPropertyType
+ AZTBGEN009 | Usage    | Error    | AZTBGEN009_DuplicatePropertyNameChange
+ AZTBGEN010 | Usage    | Error    | AZTBGEN010_ConverterSignatureMismatch
+ AZTBGEN011 | Usage    | Error    | AZTBGEN011_ConverterReturnTypeMismatch

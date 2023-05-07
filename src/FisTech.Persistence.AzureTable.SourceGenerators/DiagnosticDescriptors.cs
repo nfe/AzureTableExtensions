@@ -49,14 +49,14 @@ internal static class DiagnosticDescriptors
         "Required property '{0}' not found on adapter class '{1}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor DuplicateProperty = new("AZTBGEN005",
-        "Duplicate property",
-        "Duplicate property '{0}' on adapter class '{1}'",
-        Categories.Usage, DiagnosticSeverity.Error, true);
-
-    public static readonly DiagnosticDescriptor PropertyNotFound = new("AZTBGEN006",
+    public static readonly DiagnosticDescriptor PropertyNotFound = new("AZTBGEN005",
         "Property not found",
         "Property '{0}' not found on adapter class '{1}'",
+        Categories.Usage, DiagnosticSeverity.Error, true);
+
+    public static readonly DiagnosticDescriptor DuplicateProperty = new("AZTBGEN006",
+        "Duplicate property",
+        "Duplicate property '{0}' on adapter class '{1}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     public static readonly DiagnosticDescriptor PropertyTypeMismatch = new("AZTBGEN007",
@@ -84,39 +84,5 @@ internal static class DiagnosticDescriptors
         "Converter return must be of type '{0}' for property {1} on adapter class '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    // public static readonly DiagnosticDescriptor DuplicateNameChangeTargetName = new("AZTBGEN008",
-    //     "Target name already exists",
-    //     "A name change with the same target '{0}' has already been added on adapter class '{1}'",
-    //     Categories.Usage, DiagnosticSeverity.Error, true);
-    //
-    // public static readonly DiagnosticDescriptor NameChangeTargetNameConflict = new("AZTBGEN009",
-    //     "Target name conflict",
-    //     "The name change target '{0}' conflicts with an existing property on adapter class '{1}'",
-    //     Categories.Usage, DiagnosticSeverity.Error, true);
-    //
-    // public static readonly DiagnosticDescriptor InvalidNameChangeTargetName = new("AZTBGEN010",
-    //     "Invalid target name",
-    //     "Target name is not valid for property '{0}' on adapter class '{1}'",
-    //     Categories.Usage, DiagnosticSeverity.Error, true);
-    //
-    // public static readonly DiagnosticDescriptor DuplicateConverter = new("AZTBGEN011",
-    //     "Duplicate converter",
-    //     "Duplicate converter for property '{0}' on adapter class '{1}'",
-    //     Categories.Usage, DiagnosticSeverity.Error, true);
-    //
-
-    //
-    // public static readonly DiagnosticDescriptor ConverterParameterCountMismatch = new("AZTBGEN013",
-    //     "Converter parameter count mismatch",
-    //     "Converter parameter count must be '{0}' on adapter class '{1}'",
-    //     Categories.Usage, DiagnosticSeverity.Error, true);
-    //
-    // public static readonly DiagnosticDescriptor ConverterParameterTypeMismatch = new("AZTBGEN014",
-    //     "Converter parameter type mismatch",
-    //     "Converter parameter type must be '{0}' on adapter class '{1}'",
-    //     Categories.Usage, DiagnosticSeverity.Error, true);
-    //
-
-    
     // @formatter:on
 }
