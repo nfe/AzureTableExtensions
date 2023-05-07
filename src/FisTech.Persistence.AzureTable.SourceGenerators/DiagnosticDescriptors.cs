@@ -69,14 +69,19 @@ internal static class DiagnosticDescriptors
         "Unsupported type '{0}' on adapter class '{1}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor ConverterSignatureMismatch = new("AZTBGEN009",
+    public static readonly DiagnosticDescriptor DuplicatePropertyNameChange = new("AZTBGEN009",
+        "Duplicate property name change",
+        "Duplicate name change for property '{0}' on adapter class '{1}'",
+        Categories.Usage, DiagnosticSeverity.Error, true);
+
+    public static readonly DiagnosticDescriptor ConverterSignatureMismatch = new("AZTBGEN010",
         "Converter method signature mismatch",
         "Converter method must contain a single parameter of type '{0}' on adapter class '{1}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
-    public static readonly DiagnosticDescriptor DuplicatePropertyNameChange = new("AZTBGEN010",
-        "Duplicate property name change",
-        "Duplicate name change for property '{0}' on adapter class '{1}'",
+    public static readonly DiagnosticDescriptor ConverterReturnTypeMismatch = new("AZTBGEN011",
+        "Converter return type mismatch",
+        "Converter return must be of type '{0}' for property {1} on adapter class '{2}'",
         Categories.Usage, DiagnosticSeverity.Error, true);
 
     // public static readonly DiagnosticDescriptor DuplicateNameChangeTargetName = new("AZTBGEN008",
@@ -99,10 +104,7 @@ internal static class DiagnosticDescriptors
     //     "Duplicate converter for property '{0}' on adapter class '{1}'",
     //     Categories.Usage, DiagnosticSeverity.Error, true);
     //
-    // public static readonly DiagnosticDescriptor ConverterReturnTypeMismatch = new("AZTBGEN012",
-    //     "Converter return type mismatch",
-    //     "Converter return type must be '{0}' on adapter class '{1}'",
-    //     Categories.Usage, DiagnosticSeverity.Error, true);
+
     //
     // public static readonly DiagnosticDescriptor ConverterParameterCountMismatch = new("AZTBGEN013",
     //     "Converter parameter count mismatch",

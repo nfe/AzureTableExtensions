@@ -143,8 +143,15 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             return false;
         }
 
-        if (!TryGetSchemaProperty(attribute, out IPropertySymbol property, out var ignoreSourceProperty))
+        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
+
+        if (!TryGetProperty(propertyName, attribute.GetLocation(), out IPropertySymbol property))
             return false;
+
+        var ignoreSourceProperty =
+            attribute.NamedArguments
+                .FirstOrDefault(n => n.Key == nameof(SchemaPropertyAttributeBase.IgnoreSourceProperty))
+                .Value.Value is not (bool or true);
 
         if (!expectedTypes.Contains(property.Type.ToDisplayString(s_defaultDisplayFormat)))
         {
@@ -164,25 +171,6 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         _adapterContext.Getters.Add(property.Name, getter);
         _adapterContext.IgnoredProperties.Add(property.Name);
-
-        return true;
-    }
-
-    private bool TryGetSchemaProperty(AttributeData attribute, out IPropertySymbol property,
-        out bool ignoreSourceProperty)
-    {
-        property = null!;
-        ignoreSourceProperty = false;
-
-        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
-
-        if (!TryGetProperty(propertyName, attribute.GetLocation(), out property))
-            return false;
-
-        ignoreSourceProperty =
-            attribute?.NamedArguments
-                .FirstOrDefault(n => n.Key == nameof(SchemaPropertyAttributeBase.IgnoreSourceProperty))
-                .Value.Value is not (bool or true);
 
         return true;
     }
@@ -238,7 +226,172 @@ public class AzureTableAdapterGenerator : ISourceGenerator
     {
         ImmutableArray<IMethodSymbol> methods = _adapterContext.Adapter.GetMethods().ToImmutableArray();
 
-        foreach (IMethodSymbol method in methods) { }
+        foreach (IMethodSymbol method in methods)
+        foreach (AttributeData? attribute in method.GetAttributes())
+        {
+            switch (attribute.AttributeClass?.Name)
+            {
+                case nameof(PartitionKeyConvertAttribute):
+                    if (!TryConfigureSchemaPropertyConverter(nameof(ITableEntity.PartitionKey), attribute, method,
+                        new[] { "String" }))
+                        return false;
+
+                    break;
+
+                case nameof(RowKeyConvertAttribute):
+                    if (!TryConfigureSchemaPropertyConverter(nameof(ITableEntity.RowKey), attribute, method,
+                        new[] { "String" }))
+                        return false;
+
+                    break;
+
+                case nameof(TimestampConvertAttribute):
+                    if (!TryConfigureSchemaPropertyConverter(nameof(ITableEntity.Timestamp), attribute, method,
+                        new[] { "DateTimeOffset", "DateTimeOffset?" }))
+                        return false;
+
+                    break;
+
+                case nameof(ETagConvertAttribute):
+                    if (!TryConfigureSchemaPropertyConverter(nameof(ITableEntity.ETag), attribute, method,
+                        new[] { "String", "String?" }))
+                        return false;
+
+                    break;
+
+                case nameof(ConvertAttribute):
+                    if (!TryConfigureConverter(attribute, method))
+                        return false;
+
+                    break;
+
+                case nameof(ConvertBackAttribute):
+                    if (!TryConfigureBackConverter(attribute, method))
+                        return false;
+
+                    break;
+
+                default:
+                    continue;
+            }
+        }
+
+        return true;
+    }
+
+    private bool TryConfigureSchemaPropertyConverter(string schemaPropertyName, AttributeData attribute,
+        IMethodSymbol converter, string[] expectedTypes)
+    {
+        if (_adapterContext.SchemaPropertiesSetters.ContainsKey(schemaPropertyName))
+        {
+            ReportDuplicatedProperty(schemaPropertyName, attribute.GetLocation());
+            return false;
+        }
+
+        if (!IsValidConverter(converter))
+            return false;
+
+        if (!expectedTypes.Contains(converter.ReturnType.ToDisplayString(s_defaultDisplayFormat)))
+        {
+            ReportPropertyTypeMismatch(schemaPropertyName, expectedTypes, converter.Locations.First());
+            return false;
+        }
+
+        IEnumerable<string> ignoredProperties =
+            attribute.ConstructorArguments[0].Values.Select(p => p.Value).Cast<string>();
+
+        foreach (var ignoredPropertyName in ignoredProperties)
+        {
+            if (TryGetProperty(ignoredPropertyName, converter.Locations.First(), out IPropertySymbol ignoredProperty))
+                _adapterContext.IgnoredProperties.Add(ignoredProperty.Name);
+        }
+
+        _adapterContext.SchemaPropertiesSetters.Add(schemaPropertyName, $"{converter.Name}(item)");
+        return true;
+    }
+
+    private bool TryConfigureConverter(AttributeData attribute, IMethodSymbol converter)
+    {
+        var targetName = (string)attribute.ConstructorArguments[0].Value!;
+
+        if (_adapterContext.Setters.ContainsKey(targetName))
+        {
+            ReportDuplicatedProperty(targetName, attribute.GetLocation());
+            return false;
+        }
+
+        if (!IsValidConverter(converter))
+            return false;
+
+        IEnumerable<string> ignoredProperties = attribute.ConstructorArguments.Length == 1
+            ? new[] { targetName }
+            : attribute.ConstructorArguments[1].Values.Select(p => p.Value).Cast<string>();
+
+        foreach (var ignoredPropertyName in ignoredProperties)
+        {
+            if (TryGetProperty(ignoredPropertyName, converter.Locations.First(), out IPropertySymbol ignoredProperty))
+                _adapterContext.IgnoredProperties.Add(ignoredProperty.Name);
+        }
+
+        _adapterContext.Setters.Add(targetName, $"{converter.Name}(item)");
+        return true;
+    }
+
+    private bool IsValidConverter(IMethodSymbol converter)
+    {
+        if (!s_supportedTypes.Contains(converter.ReturnType.ToDisplayString(s_defaultDisplayFormat)))
+        {
+            ReportUnsupportedPropertyType(converter.ReturnType.ToDisplayString(), converter.Locations.First());
+            return false;
+        }
+
+        if (converter.Parameters.Length != 1
+            || converter.Parameters[0].Type.ToDisplayString(s_defaultDisplayFormat)
+            != _adapterContext.ItemType.ToDisplayString(s_defaultDisplayFormat))
+        {
+            ReportConverterSignatureMismatch(converter.Locations.First());
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryConfigureBackConverter(AttributeData attribute, IMethodSymbol backConverter)
+    {
+        var propertyName = (string)attribute.ConstructorArguments[0].Value!;
+
+        if (_adapterContext.Getters.ContainsKey(propertyName))
+        {
+            ReportDuplicatedProperty(propertyName, attribute.GetLocation());
+            return false;
+        }
+
+        if (!IsValidBackConverter(backConverter))
+            return false;
+
+        if (!TryGetProperty(propertyName, attribute.GetLocation(), out IPropertySymbol property))
+            return false;
+
+        if (backConverter.ReturnType.ToDisplayString(s_defaultDisplayFormat)
+            != property.Type.ToDisplayString(s_defaultDisplayFormat))
+        {
+            ReportConverterReturnTypeMismatch(property.Name, property.Type.ToDisplayString(),
+                backConverter.Locations.First());
+            return false;
+        }
+
+        _adapterContext.Getters.Add(property.Name, $"{backConverter.Name}(entity)");
+        return true;
+    }
+
+    private bool IsValidBackConverter(IMethodSymbol backConverter)
+    {
+        if (backConverter.Parameters.Length != 1
+            || backConverter.Parameters[0].Type.ToDisplayString(s_defaultDisplayFormat) != nameof(TableEntity))
+        {
+            ReportBackConverterSignatureMismatch(typeof(TableEntity).FullName, backConverter.Locations.First());
+            return false;
+        }
 
         return true;
     }
@@ -266,11 +419,9 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
     private bool TryConfigurePropertySetter(IPropertySymbol property, string targetName)
     {
-        Location? location = property.Locations.FirstOrDefault();
-
         if (_adapterContext.Setters.ContainsKey(targetName))
         {
-            ReportDuplicatedProperty(targetName, location);
+            ReportDuplicatedProperty(targetName, property.Locations.First());
             return false;
         }
 
@@ -278,7 +429,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         if (setter is null)
         {
-            ReportUnsupportedPropertyType(property.Type.Name, location);
+            ReportUnsupportedPropertyType(property.Type.Name, property.Locations.First());
             return false;
         }
 
@@ -307,11 +458,9 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
     private bool TryConfigurePropertyGetter(IPropertySymbol property, string targetName)
     {
-        Location? location = property.Locations.FirstOrDefault();
-
         if (_adapterContext.Getters.ContainsKey(targetName))
         {
-            ReportDuplicatedProperty(targetName, location);
+            ReportDuplicatedProperty(targetName, property.Locations.First());
             return false;
         }
 
@@ -319,7 +468,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         if (getter is null)
         {
-            ReportUnsupportedPropertyType(property.Type.Name, location);
+            ReportUnsupportedPropertyType(property.Type.Name, property.Locations.First());
             return false;
         }
 
@@ -451,8 +600,9 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 // Apply default comparison to avoid unnecessary serialization
                 sourceTextBuilder.AppendLine($$"""
 
-                        if ({{timestampSetter}} != default)
-                            entity.Timestamp = {{timestampSetter}};
+                        var timestamp = {{timestampSetter}};
+                        if (timestamp != default)
+                            entity.Timestamp = timestamp;
                 """);
 
             if (_adapterContext.SchemaPropertiesSetters.TryGetValue(nameof(ITableEntity.ETag), out var etagSetter))
@@ -462,8 +612,9 @@ public class AzureTableAdapterGenerator : ISourceGenerator
                 // Apply default comparison to avoid unnecessary serialization
                 sourceTextBuilder.AppendLine($$"""
 
-                        if ({{etagSetter}} != default)
-                            entity.ETag = new ETag({{etagSetter}});
+                        var etag = {{etagSetter}};
+                        if (etag != default)
+                            entity.ETag = new ETag(etag);
                 """);
             }
 
@@ -524,15 +675,23 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.UnsupportedPropertyType,
             location ?? _adapterContext.Location, actualType, _adapterContext.DisplayString));
 
-    private void ReportConverterSignatureMismatch(Location location) => _executionContext.ReportDiagnostic(
-        Diagnostic.Create(DiagnosticDescriptors.ConverterSignatureMismatch, location,
-            _adapterContext.ItemType.ToDisplayString(), _adapterContext.DisplayString));
-
     private void ReportDuplicatePropertyNameChange(string propertyName, Location? location) =>
         _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.DuplicatePropertyNameChange,
             location, propertyName, _adapterContext.DisplayString));
 
-    private struct AdapterContext
+    private void ReportConverterSignatureMismatch(Location location) => _executionContext.ReportDiagnostic(
+        Diagnostic.Create(DiagnosticDescriptors.ConverterSignatureMismatch, location,
+            _adapterContext.ItemType.ToDisplayString(), _adapterContext.DisplayString));
+
+    private void ReportBackConverterSignatureMismatch(string expectedType, Location location) => _executionContext.ReportDiagnostic(
+        Diagnostic.Create(DiagnosticDescriptors.ConverterSignatureMismatch, location, expectedType,
+            _adapterContext.DisplayString));
+
+    private void ReportConverterReturnTypeMismatch(string propertyName, string expectedType, Location location) =>
+        _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.ConverterReturnTypeMismatch,
+            location, expectedType, propertyName, _adapterContext.DisplayString));
+
+    private readonly struct AdapterContext
     {
         public AdapterContext(INamedTypeSymbol adapter)
         {

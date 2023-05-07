@@ -117,11 +117,13 @@ public class AzureTableAdapterGeneratorTests
                 {
                     var entity = new TableEntity(item.MyPartitionKey, item.MyRowKey);
 
-                    if (item.MyTimestamp != default)
-                        entity.Timestamp = item.MyTimestamp;
+                    var timestamp = item.MyTimestamp;
+                    if (timestamp != default)
+                        entity.Timestamp = timestamp;
 
-                    if (item.MyETag != default)
-                        entity.ETag = new ETag(item.MyETag);
+                    var etag = item.MyETag;
+                    if (etag != default)
+                        entity.ETag = new ETag(etag);
 
                     return entity;
                 }
@@ -205,11 +207,13 @@ public class AzureTableAdapterGeneratorTests
                         { "MyETag", item.MyETag },
                     };
 
-                    if (item.MyTimestamp != default)
-                        entity.Timestamp = item.MyTimestamp;
+                    var timestamp = item.MyTimestamp;
+                    if (timestamp != default)
+                        entity.Timestamp = timestamp;
 
-                    if (item.MyETag != default)
-                        entity.ETag = new ETag(item.MyETag);
+                    var etag = item.MyETag;
+                    if (etag != default)
+                        entity.ETag = new ETag(etag);
 
                     return entity;
                 }
@@ -678,7 +682,7 @@ public class AzureTableAdapterGeneratorTests
 
                 public float TotalAreaKm { get; set; }
 
-                public DateTimeOffset Epoch { get; set; }
+                public long Epoch { get; set; }
 
                 public float? ETag { get; set; }
             }
@@ -691,14 +695,15 @@ public class AzureTableAdapterGeneratorTests
             }
             """;
 
-        // TODO: Readonly model and entity for converter argument
         const string adapterSource = """
+            using Azure.Data.Tables;
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
+            using System;
 
             namespace TestNamespace.Adapters;
 
-            [Ignore(nameof(TestModel.TotalAreaKm))]
+            [NameChange(nameof(TestModel.Epoch), "UnixTimestamp")]
             public partial class TestModelAdapter : AzureTableAdapterBase<TestModel>
             {
                 private const float MileUnit = 0.621371f;
@@ -711,7 +716,7 @@ public class AzureTableAdapterGeneratorTests
 
                 // Does not ignore source property
                 [TimestampConvert]
-                private DateTimeOffset? SetTimestamp(TestModel item) => item.Epoch is not default ? DateTimeOffset.FromUnixTimeSeconds(item.Epoch) : null;
+                private DateTimeOffset? SetTimestamp(TestModel item) => item.Epoch != 0 ? DateTimeOffset.FromUnixTimeSeconds(item.Epoch) : null;
 
                 [ETagConvert(nameof(TestModel.ETag))]
                 private string? SetETag(TestModel item) => item.ETag?.ToString();
@@ -719,22 +724,15 @@ public class AzureTableAdapterGeneratorTests
                 [Convert(nameof(TestModel.Coordinates))]
                 private string SetCoordinates(TestModel item) => $"{item.Coordinates.Latitude:N6},{item.Coordinates.Longitude:N6}";
 
-                // Ignored property - does not generate assignment
                 // Convert kilometers to miles
                 [Convert(nameof(TestModel.TotalAreaKm))]
                 private float SetTotalArea(TestModel item) => item.TotalAreaKm * MileUnit;
-
-                [Convert("UnixTimestamp", nameof(TestModel.Epoch))]
-                private long SetEpoch(TestModel item) => item.Epoch.ToUnixTimeSeconds();
 
                 [ConvertBack(nameof(TestModel.Country))]
                 private string GetCountry(TableEntity entity) => entity.PartitionKey.Split(':')[0];
 
                 [ConvertBack(nameof(TestModel.State))]
                 private string GetState(TableEntity entity) => entity.PartitionKey.Split(':')[2];
-
-                [ConvertBack(nameof(TestModel.StateAbbreviation))]
-                private string GetStateAbbreviation(TableEntity entity) => entity.PartitionKey.Split(':')[1];
 
                 [ConvertBack(nameof(TestModel.CityCode))]
                 private int GetCityCode(TableEntity entity) => int.Parse(entity.RowKey.Split('_')[0]);
@@ -754,17 +752,15 @@ public class AzureTableAdapterGeneratorTests
                 }
 
                 [ConvertBack(nameof(TestModel.TotalAreaKm))]
-                private float GetTotalArea(TableEntity entity) => entity.GetFloat(nameof(TestModel.TotalAreaKm)) / MileUnit;
-
-                [ConvertBack(nameof(TestModel.Epoch))]
-                private DateTimeOffset GetEpoch(TableEntity entity) => DateTimeOffset.FromUnixTimeSeconds(entity.GetInt64(nameof(TestModel.Epoch)).GetValueOrDefault());
+                private float GetTotalArea(TableEntity entity) => (float)entity.GetDouble(nameof(TestModel.TotalAreaKm)).GetValueOrDefault() / MileUnit;
 
                 [ConvertBack(nameof(TestModel.ETag))]
-                private float? GetETag(TableEntity entity) => float.TryParse(entity.ETag, out var result) ? result : null;
+                private float? GetETag(TableEntity entity) => float.TryParse(entity.ETag.ToString(), out var result) ? result : null;
             }
             """;
 
         const string expected = """
+            using Azure;
             using Azure.Data.Tables;
             using FisTech.Persistence.AzureTable;
             using TestNamespace.Models;
@@ -778,8 +774,9 @@ public class AzureTableAdapterGeneratorTests
                     var entity = new TableEntity(SetPartitionKey(item), SetRowKey(item))
                     {
                         { "Coordinates", SetCoordinates(item) },
-                        { "UnixTimestamp", SetEpoch(item) },
-                        { nameof(TestModel.Population), item.Population },
+                        { "TotalAreaKm", SetTotalArea(item) },
+                        { "Population", item.Population },
+                        { "UnixTimestamp", item.Epoch },
                     };
 
                     var timestamp = SetTimestamp(item);
@@ -799,10 +796,11 @@ public class AzureTableAdapterGeneratorTests
                     State = GetState(entity),
                     CityCode = GetCityCode(entity),
                     City = GetCity(entity),
-                    Population = entity.GetInt32(nameof(TestModel.Population)).GetValueOrDefault(),
                     Coordinates = GetCoordinates(entity),
-                    Epoch = entity.GetInt64("UnixTimestamp").GetValueOrDefault(),
+                    TotalAreaKm = GetTotalArea(entity),
                     ETag = GetETag(entity),
+                    Population = entity.GetInt32("Population").GetValueOrDefault(),
+                    Epoch = entity.GetInt64("UnixTimestamp").GetValueOrDefault(),
                 };
             }
             """;
