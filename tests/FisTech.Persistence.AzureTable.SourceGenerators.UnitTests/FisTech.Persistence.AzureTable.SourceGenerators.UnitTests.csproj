@@ -5,10 +5,10 @@
         <TargetFramework>net6.0</TargetFramework>
 
         <!--
-        NETSDK1138: The target framework is out of support (.et5.0)
         CA1707: Identifiers should not contain underscores
+        NETSDK1138: The target framework is out of support (.et5.0)
         -->
-        <NoWarn>$(NoWarn);NETSDK1138;CA1707</NoWarn>
+        <NoWarn>$(NoWarn);CA1707;NETSDK1138</NoWarn>
         
         <IsPackable>false</IsPackable>
     </PropertyGroup>

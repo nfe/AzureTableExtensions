@@ -84,7 +84,9 @@ public sealed class ETagConvertAttribute : ConvertAttributeBase
 
 public sealed class ConvertAttribute : ConvertAttributeBase
 {
+#pragma warning disable CA1019
     public ConvertAttribute(string sourcePropertyName) : this(sourcePropertyName, sourcePropertyName) { }
+#pragma warning restore CA1019
     
     public ConvertAttribute(string targetName, params string[] ignoreSourceProperties) : base(ignoreSourceProperties) =>
         TargetName = targetName;
