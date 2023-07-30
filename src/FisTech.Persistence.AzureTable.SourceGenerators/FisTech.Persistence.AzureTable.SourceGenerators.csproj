@@ -5,6 +5,7 @@
 
         <IsRoslynComponent>true</IsRoslynComponent>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <Version>0.1.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
