@@ -9,7 +9,7 @@
         <AnalysisMode>All</AnalysisMode>
         <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-        
+
         <!--
         CA1014: Mark assemblies with CLSCompliantAttribute
         CA1303: Do not pass literals as localized parameters

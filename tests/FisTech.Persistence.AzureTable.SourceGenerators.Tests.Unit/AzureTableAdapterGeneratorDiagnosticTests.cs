@@ -13,31 +13,31 @@ public class AzureTableAdapterGeneratorDiagnosticTests
         public class Movie
         {
             public string Id { get; set; }
-
+        
             public string Title { get; set; }
-
+        
             public char FirstLetterOfTitle { get; set; }
-
+        
             public Genre Genre { get; set; }
-
+        
             public string Director { get; set; }
-
+        
             public DateTime ReleaseDate { get; set; }
-
+        
             public byte? AgeRating { get; set; }
-
+        
             public float? Rating { get; set; }
-
+        
             public bool IsAvailable { get; set; }
-
+        
             public short? SequelNumber { get; set; }
-
+        
             public long? Budget { get; set; }
-
+        
             public double? BoxOfficeRevenue { get; set; }
-
+        
             public DateTimeOffset? LastUpdate { get; set; }
-
+        
             public string? ETag { get; set; }
         }
 
@@ -68,15 +68,15 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     public async Task Generator_InvalidAbstractClass_ReturnsDiagnosticErrorAZTBGEN001()
     {
         const string adapterSource = """
-             using FisTech.Persistence.AzureTable;
-             using TestNamespace.Models;
-             
-             namespace TestNamespace.Adapters;
-             
-             [PartitionKey(nameof(Movie.Director))]
-             [RowKey(nameof(Movie.Id))]
-             public abstract partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
-             """;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(Movie.Director))]
+            [RowKey(nameof(Movie.Id))]
+            public abstract partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
+            """;
 
         var test = new AzureTableAdapterGeneratorTest
         {
@@ -101,15 +101,15 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     public async Task Generator_InvalidGenericClass_ReturnsDiagnosticErrorAZTBGEN002()
     {
         const string adapterSource = """
-             using FisTech.Persistence.AzureTable;
-             using TestNamespace.Models;
-             
-             namespace TestNamespace.Adapters;
-             
-             [PartitionKey(nameof(Movie.Director))]
-             [RowKey(nameof(Movie.Id))]
-             public partial class MovieAdapter<T> : AzureTableAdapterBase<Movie> { }
-             """;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(Movie.Director))]
+            [RowKey(nameof(Movie.Id))]
+            public partial class MovieAdapter<T> : AzureTableAdapterBase<Movie> { }
+            """;
 
         var test = new AzureTableAdapterGeneratorTest
         {
@@ -134,15 +134,15 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     public async Task Generator_ClassIsNotPartial_ReturnsDiagnosticErrorAZTBGEN003()
     {
         const string adapterSource = """
-             using FisTech.Persistence.AzureTable;
-             using TestNamespace.Models;
-             
-             namespace TestNamespace.Adapters;
-             
-             [PartitionKey(nameof(Movie.Director))]
-             [RowKey(nameof(Movie.Id))]
-             public class MovieAdapter : AzureTableAdapterBase<Movie> { }
-             """;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(Movie.Director))]
+            [RowKey(nameof(Movie.Id))]
+            public class MovieAdapter : AzureTableAdapterBase<Movie> { }
+            """;
 
         var test = new AzureTableAdapterGeneratorTest
         {
@@ -235,14 +235,14 @@ public class AzureTableAdapterGeneratorDiagnosticTests
         string attributeName, string propertyType)
     {
         var adapterSource = $$"""
-             using FisTech.Persistence.AzureTable;
-             using TestNamespace.Models;
-             
-             namespace TestNamespace.Adapters;
-             
-             {{attributesSource}}
-             public partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
-             """;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            {{attributesSource}}
+            public partial class MovieAdapter : AzureTableAdapterBase<Movie> { }
+            """;
 
         var test = new AzureTableAdapterGeneratorTest
         {
@@ -273,13 +273,13 @@ public class AzureTableAdapterGeneratorDiagnosticTests
     {
         var modelSource = $$"""
             namespace TestNamespace.Models;
-            
+
             public class TestModel
             {
                 public string PartitionKey { get; set; }
-
+            
                 public string RowKey { get; set; }
-
+            
                 public {{propertyType}} MyProperty { get; set; }
             }
 
@@ -290,15 +290,15 @@ public class AzureTableAdapterGeneratorDiagnosticTests
             """;
 
         const string adapterSource = """
-             using FisTech.Persistence.AzureTable;
-             using TestNamespace.Models;
-             
-             namespace TestNamespace.Adapters;
-             
-             [PartitionKey(nameof(TestModel.PartitionKey))]
-             [RowKey(nameof(TestModel.RowKey))]
-             public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
-             """;
+            using FisTech.Persistence.AzureTable;
+            using TestNamespace.Models;
+
+            namespace TestNamespace.Adapters;
+
+            [PartitionKey(nameof(TestModel.PartitionKey))]
+            [RowKey(nameof(TestModel.RowKey))]
+            public partial class TestModelAdapter : AzureTableAdapterBase<TestModel> { }
+            """;
 
         var test = new AzureTableAdapterGeneratorTest
         {

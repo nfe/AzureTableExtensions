@@ -2,9 +2,9 @@
 
 namespace FisTech.Persistence.AzureTable;
 
-public interface IAzureTableAdapter<TSource> where TSource : class, new()
+public interface IAzureTableAdapter<TItem> where TItem : class, new()
 {
-    ITableEntity Adapt(TSource item);
+    ITableEntity Adapt(TItem item);
 
-    TSource Adapt(TableEntity entity);
+    TItem Adapt(TableEntity entity);
 }

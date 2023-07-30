@@ -1,6 +1,4 @@
-﻿using Azure;
-using Azure.Data.Tables;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace FisTech.Persistence.AzureTable.SourceGenerators;
 
@@ -90,27 +88,26 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             switch (attribute.AttributeClass?.Name)
             {
                 case nameof(PartitionKeyAttribute):
-                    if (!TryConfigureSchemaProperty(nameof(ITableEntity.PartitionKey), attribute, new[] { "String" }))
+                    if (!TryConfigureSchemaProperty("PartitionKey", attribute, new[] { "String" }))
                         return false;
 
                     break;
 
                 case nameof(RowKeyAttribute):
-                    if (!TryConfigureSchemaProperty(nameof(ITableEntity.RowKey), attribute, new[] { "String" }))
+                    if (!TryConfigureSchemaProperty("RowKey", attribute, new[] { "String" }))
                         return false;
 
                     break;
 
                 case nameof(TimestampAttribute):
-                    if (!TryConfigureSchemaProperty(nameof(ITableEntity.Timestamp), attribute,
+                    if (!TryConfigureSchemaProperty("Timestamp", attribute,
                         new[] { "DateTimeOffset", "DateTimeOffset?" }))
                         return false;
 
                     break;
 
                 case nameof(ETagAttribute):
-                    if (!TryConfigureSchemaProperty(nameof(ITableEntity.ETag), attribute,
-                        new[] { "String", "String?" }))
+                    if (!TryConfigureSchemaProperty("ETag", attribute, new[] { "String", "String?" }))
                         return false;
 
                     break;
@@ -127,8 +124,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
                     break;
 
-                default:
-                    continue;
+                default: continue;
             }
         }
 
@@ -166,7 +162,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         var getter = $"entity.{schemaPropertyName}";
 
-        if (schemaPropertyName is nameof(ITableEntity.ETag))
+        if (schemaPropertyName is "ETag")
             getter += ".ToString()";
 
         _adapterContext.Getters.Add(property.Name, getter);
@@ -232,29 +228,26 @@ public class AzureTableAdapterGenerator : ISourceGenerator
             switch (attribute.AttributeClass?.Name)
             {
                 case nameof(PartitionKeyConvertAttribute):
-                    if (!TryConfigureSchemaPropertyConverter(nameof(ITableEntity.PartitionKey), attribute, method,
-                        new[] { "String" }))
+                    if (!TryConfigureSchemaPropertyConverter("PartitionKey", attribute, method, new[] { "String" }))
                         return false;
 
                     break;
 
                 case nameof(RowKeyConvertAttribute):
-                    if (!TryConfigureSchemaPropertyConverter(nameof(ITableEntity.RowKey), attribute, method,
-                        new[] { "String" }))
+                    if (!TryConfigureSchemaPropertyConverter("RowKey", attribute, method, new[] { "String" }))
                         return false;
 
                     break;
 
                 case nameof(TimestampConvertAttribute):
-                    if (!TryConfigureSchemaPropertyConverter(nameof(ITableEntity.Timestamp), attribute, method,
+                    if (!TryConfigureSchemaPropertyConverter("Timestamp", attribute, method,
                         new[] { "DateTimeOffset", "DateTimeOffset?" }))
                         return false;
 
                     break;
 
                 case nameof(ETagConvertAttribute):
-                    if (!TryConfigureSchemaPropertyConverter(nameof(ITableEntity.ETag), attribute, method,
-                        new[] { "String", "String?" }))
+                    if (!TryConfigureSchemaPropertyConverter("ETag", attribute, method, new[] { "String", "String?" }))
                         return false;
 
                     break;
@@ -271,8 +264,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
                     break;
 
-                default:
-                    continue;
+                default: continue;
             }
         }
 
@@ -387,9 +379,9 @@ public class AzureTableAdapterGenerator : ISourceGenerator
     private bool IsValidBackConverter(IMethodSymbol backConverter)
     {
         if (backConverter.Parameters.Length != 1
-            || backConverter.Parameters[0].Type.ToDisplayString(s_defaultDisplayFormat) != nameof(TableEntity))
+            || backConverter.Parameters[0].Type.ToDisplayString(s_defaultDisplayFormat) != "TableEntity")
         {
-            ReportBackConverterSignatureMismatch(typeof(TableEntity).FullName, backConverter.Locations.First());
+            ReportBackConverterSignatureMismatch("Azure.Data.Tables.TableEntity", backConverter.Locations.First());
             return false;
         }
 
@@ -520,15 +512,15 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
     private bool IsValidAdapterContext()
     {
-        if (!_adapterContext.SchemaPropertiesSetters.ContainsKey(nameof(ITableEntity.PartitionKey)))
+        if (!_adapterContext.SchemaPropertiesSetters.ContainsKey("PartitionKey"))
         {
-            ReportRequiredPropertyNotFound(nameof(ITableEntity.PartitionKey));
+            ReportRequiredPropertyNotFound("PartitionKey");
             return false;
         }
 
-        if (!_adapterContext.SchemaPropertiesSetters.ContainsKey(nameof(ITableEntity.RowKey)))
+        if (!_adapterContext.SchemaPropertiesSetters.ContainsKey("RowKey"))
         {
-            ReportRequiredPropertyNotFound(nameof(ITableEntity.RowKey));
+            ReportRequiredPropertyNotFound("RowKey");
             return false;
         }
 
@@ -541,8 +533,7 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         var usingStatements = new HashSet<string>(StringComparer.Ordinal)
         {
-            typeof(ITableEntity).Namespace,
-            typeof(TableEntity).Namespace,
+            "Azure.Data.Tables",
             typeof(IAzureTableAdapter<>).Namespace,
             _adapterContext.ItemType.ContainingNamespace.ToDisplayString()
         };
@@ -559,27 +550,29 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
         _executionContext.AddSource($"{_adapterContext.Adapter.Name}.g.cs", SourceText.From(sourceText, Encoding.UTF8));
 
+        return;
+
         void GenerateClassDeclaration()
         {
             sourceTextBuilder.AppendLine($$"""
 
-            namespace {{_adapterContext.Adapter.ContainingNamespace.ToDisplayString()}};
+                namespace {{_adapterContext.Adapter.ContainingNamespace.ToDisplayString()}};
 
-            public partial class {{_adapterContext.Adapter.Name}} : IAzureTableAdapter<{{_adapterContext.ItemType.Name}}>
-            {
-            """);
+                public partial class {{_adapterContext.Adapter.Name}} : IAzureTableAdapter<{{_adapterContext.ItemType.Name}}>
+                {
+                """);
         }
 
         void GenerateItemToEntityAdapter()
         {
-            var partitionKeySetter = _adapterContext.SchemaPropertiesSetters[nameof(ITableEntity.PartitionKey)];
-            var rowKeySetter = _adapterContext.SchemaPropertiesSetters[nameof(ITableEntity.RowKey)];
+            var partitionKeySetter = _adapterContext.SchemaPropertiesSetters["PartitionKey"];
+            var rowKeySetter = _adapterContext.SchemaPropertiesSetters["RowKey"];
 
             sourceTextBuilder.Append($$"""
-                public ITableEntity Adapt({{_adapterContext.ItemType.Name}} item)
-                {
-                    var entity = new TableEntity({{partitionKeySetter}}, {{rowKeySetter}})
-            """);
+                    public ITableEntity Adapt({{_adapterContext.ItemType.Name}} item)
+                    {
+                        var entity = new TableEntity({{partitionKeySetter}}, {{rowKeySetter}})
+                """);
 
             if (_adapterContext.Setters.Count == 0)
                 sourceTextBuilder.AppendLine(";");
@@ -589,59 +582,58 @@ public class AzureTableAdapterGenerator : ISourceGenerator
 
                 foreach (KeyValuePair<string, string> setter in _adapterContext.Setters)
                     sourceTextBuilder.AppendLine($$"""
-                                { "{{setter.Key}}", {{setter.Value}} },
-                    """);
+                                    { "{{setter.Key}}", {{setter.Value}} },
+                        """);
 
                 sourceTextBuilder.AppendLine("        };");
             }
 
-            if (_adapterContext.SchemaPropertiesSetters.TryGetValue(nameof(ITableEntity.Timestamp),
-                    out var timestampSetter))
+            if (_adapterContext.SchemaPropertiesSetters.TryGetValue("Timestamp", out var timestampSetter))
                 // Apply default comparison to avoid unnecessary serialization
                 sourceTextBuilder.AppendLine($$"""
+                    
+                            var timestamp = {{timestampSetter}};
+                            if (timestamp != default)
+                                entity.Timestamp = timestamp;
+                    """);
 
-                        var timestamp = {{timestampSetter}};
-                        if (timestamp != default)
-                            entity.Timestamp = timestamp;
-                """);
-
-            if (_adapterContext.SchemaPropertiesSetters.TryGetValue(nameof(ITableEntity.ETag), out var etagSetter))
+            if (_adapterContext.SchemaPropertiesSetters.TryGetValue("ETag", out var etagSetter))
             {
-                usingStatements.Add(typeof(ETag).Namespace);
+                usingStatements.Add("Azure");
 
                 // Apply default comparison to avoid unnecessary serialization
                 sourceTextBuilder.AppendLine($$"""
-
-                        var etag = {{etagSetter}};
-                        if (etag != default)
-                            entity.ETag = new ETag(etag);
-                """);
+                    
+                            var etag = {{etagSetter}};
+                            if (etag != default)
+                                entity.ETag = new ETag(etag);
+                    """);
             }
 
             sourceTextBuilder.AppendLine("""
-
-                    return entity;
-                }
-            """);
+                
+                        return entity;
+                    }
+                """);
         }
 
         void GenerateEntityToItemAdapter()
         {
             sourceTextBuilder.AppendLine($$"""
-
-                public {{_adapterContext.ItemType.Name}} Adapt(TableEntity entity) => new()
-                {
-            """);
+                
+                    public {{_adapterContext.ItemType.Name}} Adapt(TableEntity entity) => new()
+                    {
+                """);
 
             foreach (KeyValuePair<string, string> getter in _adapterContext.Getters)
                 sourceTextBuilder.AppendLine($$"""
-                        {{getter.Key}} = {{getter.Value}},
-                """);
+                            {{getter.Key}} = {{getter.Value}},
+                    """);
 
             sourceTextBuilder.Append("""
-                };
-            }
-            """);
+                    };
+                }
+                """);
         }
 
         void GenerateUsingStatements()
@@ -683,9 +675,9 @@ public class AzureTableAdapterGenerator : ISourceGenerator
         Diagnostic.Create(DiagnosticDescriptors.ConverterSignatureMismatch, location,
             _adapterContext.ItemType.ToDisplayString(), _adapterContext.DisplayString));
 
-    private void ReportBackConverterSignatureMismatch(string expectedType, Location location) => _executionContext.ReportDiagnostic(
-        Diagnostic.Create(DiagnosticDescriptors.ConverterSignatureMismatch, location, expectedType,
-            _adapterContext.DisplayString));
+    private void ReportBackConverterSignatureMismatch(string expectedType, Location location) =>
+        _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.ConverterSignatureMismatch, location,
+            expectedType, _adapterContext.DisplayString));
 
     private void ReportConverterReturnTypeMismatch(string propertyName, string expectedType, Location location) =>
         _executionContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.ConverterReturnTypeMismatch,

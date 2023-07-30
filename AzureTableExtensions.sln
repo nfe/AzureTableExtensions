@@ -5,20 +5,17 @@ VisualStudioVersion = 17.5.33402.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{2CD24588-A9D0-4F80-BD39-9D7FB3B364D1}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4AECA488-8B22-4B91-A48A-3BDCFDF29519}"
-	ProjectSection(SolutionItems) = preProject
-		.editorconfig = .editorconfig
-		.gitignore = .gitignore
-		Directory.Build.props = Directory.Build.props
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FisTech.Persistence.AzureTable", "src\FisTech.Persistence.AzureTable\FisTech.Persistence.AzureTable.csproj", "{9D958425-3C09-452E-9FF5-9F3B9272707E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FisTech.Persistence.AzureTable.SourceGenerators", "src\FisTech.Persistence.AzureTable.SourceGenerators\FisTech.Persistence.AzureTable.SourceGenerators.csproj", "{A4804A9D-22BC-4396-B798-82F00896BA53}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{40F069DC-2235-494F-BA81-9C3FCC8C15F7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FisTech.Persistence.AzureTable.SourceGenerators.UnitTests", "tests\FisTech.Persistence.AzureTable.SourceGenerators.UnitTests\FisTech.Persistence.AzureTable.SourceGenerators.UnitTests.csproj", "{16205511-A3B8-4653-AA2B-533DFE7C87CD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FisTech.Persistence.AzureTable.SourceGenerators.Tests.Unit", "tests\FisTech.Persistence.AzureTable.SourceGenerators.Tests.Unit\FisTech.Persistence.AzureTable.SourceGenerators.Tests.Unit.csproj", "{16205511-A3B8-4653-AA2B-533DFE7C87CD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FisTech.Persistence.AzureTable.Tests.Integration", "tests\FisTech.Persistence.AzureTable.Tests.Integration\FisTech.Persistence.AzureTable.Tests.Integration.csproj", "{F7549DFC-66A9-4548-8812-0E0DAB0FA4AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FisTech.Persistence.AzureTable.Tests.Unit", "tests\FisTech.Persistence.AzureTable.Tests.Unit\FisTech.Persistence.AzureTable.Tests.Unit.csproj", "{56B360A9-E89D-4061-A7C6-C72924898E94}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,6 +35,14 @@ Global
 		{16205511-A3B8-4653-AA2B-533DFE7C87CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{16205511-A3B8-4653-AA2B-533DFE7C87CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{16205511-A3B8-4653-AA2B-533DFE7C87CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7549DFC-66A9-4548-8812-0E0DAB0FA4AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7549DFC-66A9-4548-8812-0E0DAB0FA4AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7549DFC-66A9-4548-8812-0E0DAB0FA4AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7549DFC-66A9-4548-8812-0E0DAB0FA4AC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56B360A9-E89D-4061-A7C6-C72924898E94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56B360A9-E89D-4061-A7C6-C72924898E94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56B360A9-E89D-4061-A7C6-C72924898E94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56B360A9-E89D-4061-A7C6-C72924898E94}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -46,6 +51,8 @@ Global
 		{9D958425-3C09-452E-9FF5-9F3B9272707E} = {2CD24588-A9D0-4F80-BD39-9D7FB3B364D1}
 		{A4804A9D-22BC-4396-B798-82F00896BA53} = {2CD24588-A9D0-4F80-BD39-9D7FB3B364D1}
 		{16205511-A3B8-4653-AA2B-533DFE7C87CD} = {40F069DC-2235-494F-BA81-9C3FCC8C15F7}
+		{F7549DFC-66A9-4548-8812-0E0DAB0FA4AC} = {40F069DC-2235-494F-BA81-9C3FCC8C15F7}
+		{56B360A9-E89D-4061-A7C6-C72924898E94} = {40F069DC-2235-494F-BA81-9C3FCC8C15F7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2D568D33-C631-412B-9DAE-7CB02ABCA1AC}

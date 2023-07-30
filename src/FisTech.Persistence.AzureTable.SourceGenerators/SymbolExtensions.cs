@@ -44,7 +44,7 @@ internal static class SymbolExtensions
         .GetMembers()
         .Where(m => m is IPropertySymbol { DeclaredAccessibility: Accessibility.Public, IsStatic: false })
         .Cast<IPropertySymbol>();
-    
+
     public static string GetNameWithoutArity(this Type type) =>
         !type.IsGenericType ? type.Name : type.Name.Substring(0, type.Name.IndexOf('`'));
 

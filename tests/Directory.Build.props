@@ -1,0 +1,13 @@
+<Project>
+    <Import Project="..\Directory.Build.props"/>
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+
+        <!--
+        CA1707: Identifiers should not contain underscores
+        -->
+        <NoWarn>$(NoWarn);CA1707</NoWarn>
+    </PropertyGroup>
+</Project>

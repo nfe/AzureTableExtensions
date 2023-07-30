@@ -1,33 +1,26 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <!-- TODO: Add olders framework targets -->
         <TargetFramework>net6.0</TargetFramework>
-
-        <!--
-        CA1707: Identifiers should not contain underscores
-        NETSDK1138: The target framework is out of support (.et5.0)
-        -->
-        <NoWarn>$(NoWarn);CA1707;NETSDK1138</NoWarn>
-        
-        <IsPackable>false</IsPackable>
+        <RootNamespace>FisTech.Persistence.AzureTable.SourceGenerators.UnitTests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
         <Using Include="Xunit"/>
+        <Using Include="FluentAssertions"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="FluentAssertions" Version="6.10.0"/>
-        <PackageReference Include="Microsoft.CodeAnalysis" Version="4.4.0"/>
+        <PackageReference Include="FluentAssertions" Version="6.11.0"/>
+        <PackageReference Include="Microsoft.CodeAnalysis" Version="4.5.0"/>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit" Version="1.1.1"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0"/>
         <PackageReference Include="xunit" Version="2.4.2"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="coverlet.collector" Version="3.1.2">
+        <PackageReference Include="coverlet.collector" Version="3.2.0">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
@@ -35,7 +28,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\FisTech.Persistence.AzureTable\FisTech.Persistence.AzureTable.csproj"/>
-        <ProjectReference Include="..\..\src\FisTech.Persistence.AzureTable.SourceGenerators\FisTech.Persistence.AzureTable.SourceGenerators.csproj" OutputItemType="Analyzer"/>
+        <ProjectReference Include="..\..\src\FisTech.Persistence.AzureTable.SourceGenerators\FisTech.Persistence.AzureTable.SourceGenerators.csproj" ReferenceOutputAssembly="true" OutputItemType="Analyzer"/>
     </ItemGroup>
 
 </Project>

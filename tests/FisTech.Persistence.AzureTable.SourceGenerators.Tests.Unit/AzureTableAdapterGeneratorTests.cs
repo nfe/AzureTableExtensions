@@ -14,7 +14,7 @@ public class AzureTableAdapterGeneratorTests
             public class TestModel
             {
                 public string State { get; set; }
-
+            
                 public string Country { get; set; }
             }
             """;
@@ -42,10 +42,10 @@ public class AzureTableAdapterGeneratorTests
                 public ITableEntity Adapt(TestModel item)
                 {
                     var entity = new TableEntity(item.Country, item.State);
-
+            
                     return entity;
                 }
-
+            
                 public TestModel Adapt(TableEntity entity) => new()
                 {
                     Country = entity.PartitionKey,
@@ -81,11 +81,11 @@ public class AzureTableAdapterGeneratorTests
             public class TestModel
             {
                 public string MyPartitionKey { get; set; }
-
+            
                 public string MyRowKey { get; set; }
-
+            
                 public DateTimeOffset? MyTimestamp { get; set; }
-
+            
                 public string? MyETag { get; set; }
             }
             """;
@@ -116,18 +116,18 @@ public class AzureTableAdapterGeneratorTests
                 public ITableEntity Adapt(TestModel item)
                 {
                     var entity = new TableEntity(item.MyPartitionKey, item.MyRowKey);
-
+            
                     var timestamp = item.MyTimestamp;
                     if (timestamp != default)
                         entity.Timestamp = timestamp;
-
+            
                     var etag = item.MyETag;
                     if (etag != default)
                         entity.ETag = new ETag(etag);
-
+            
                     return entity;
                 }
-
+            
                 public TestModel Adapt(TableEntity entity) => new()
                 {
                     MyPartitionKey = entity.PartitionKey,
@@ -165,11 +165,11 @@ public class AzureTableAdapterGeneratorTests
             public class TestModel
             {
                 public string MyPartitionKey { get; set; }
-
+            
                 public string MyRowKey { get; set; }
-
+            
                 public DateTimeOffset? MyTimestamp { get; set; }
-
+            
                 public string? MyETag { get; set; }
             }
             """;
@@ -206,18 +206,18 @@ public class AzureTableAdapterGeneratorTests
                         { "MyTimestamp", item.MyTimestamp },
                         { "MyETag", item.MyETag },
                     };
-
+            
                     var timestamp = item.MyTimestamp;
                     if (timestamp != default)
                         entity.Timestamp = timestamp;
-
+            
                     var etag = item.MyETag;
                     if (etag != default)
                         entity.ETag = new ETag(etag);
-
+            
                     return entity;
                 }
-
+            
                 public TestModel Adapt(TableEntity entity) => new()
                 {
                     MyPartitionKey = entity.GetString("MyPartitionKey"),
@@ -255,63 +255,63 @@ public class AzureTableAdapterGeneratorTests
             public class TestModel
             {
                 public char MyChar { get; set; } = 'A';
-
+            
                 public char? MyNullableChar { get; set; }
-
+            
                 public string MyString { get; set; } = "Hello World";
-
+            
                 public string? MyNullableString { get; set; }
-
+            
                 public bool MyBool { get; set; } = true;
-
+            
                 public bool? MyNullableBool { get; set; }
-
+            
                 public byte MyByte { get; set; } = byte.MaxValue;
-
+            
                 public byte? MyNullableByte { get; set; }
-
+            
                 public short MyShort { get; set; } = short.MaxValue;
-
+            
                 public short? MyNullableShort { get; set; }
-
+            
                 public int MyInt { get; set; } = int.MaxValue;
-
+            
                 public int? MyNullableInt { get; set; }
-
+            
                 public long MyLong { get; set; } = long.MaxValue;
-
+            
                 public long? MyNullableLong { get; set; }
-
+            
                 public float MyFloat { get; set; } = float.MaxValue;
-
+            
                 public float? MyNullableFloat { get; set; }
-
+            
                 public double MyDouble { get; set; } = double.MaxValue;
-
+            
                 public double? MyNullableDouble { get; set; }
-
+            
                 // TODO: public decimal MyDecimal { get; set; } = decimal.MaxValue;
-
+            
                 // TODO: public decimal? MyNullableDecimal { get; set; }
-
+            
                 // TODO: public DateTime MyDateTime { get; set; } = DateTime.Now;
-
+            
                 // TODO: public DateTime? MyNullableDateTime { get; set; }
-
+            
                 public DateTimeOffset MyDateTimeOffset { get; set; } = DateTime.UtcNow;
-
+            
                 public DateTimeOffset? MyNullableDateTimeOffset { get; set; }
-
+            
                 public Guid MyGuid { get; set; } = Guid.NewGuid();
-
+            
                 public Guid? MyNullableGuid { get; set; }
-
+            
                 public MyEnum MyEnum { get; set; } = MyEnum.ValueB;
-
+            
                 public MyEnum? MyNullableEnum { get; set; }
-
+            
                 public byte[] MyByteArray { get; set; } = { 1, 2, 3, 4, 5 };
-
+            
                 public BinaryData MyBinaryData { get; set; } = new(new byte[] { 9, 8, 7, 6, 5});
             }
 
@@ -369,10 +369,10 @@ public class AzureTableAdapterGeneratorTests
                         { "MyByteArray", item.MyByteArray },
                         { "MyBinaryData", item.MyBinaryData },
                     };
-
+            
                     return entity;
                 }
-
+            
                 public TestModel Adapt(TableEntity entity) => new()
                 {
                     MyChar = entity.GetString("MyChar")[0],
@@ -430,17 +430,17 @@ public class AzureTableAdapterGeneratorTests
             public class TestModel
             {
                 public string MyPartitionKey { get; set; }
-
+            
                 public string MyRowKey { get; set; }
-
+            
                 internal string MyInternal { get; set; }
-
+            
                 private string MyPrivate { get; set; }
-
+            
                 private protected string MyPrivateProtected { get; set; }
-
+            
                 protected string MyProtected { get; set; }
-
+            
                 protected internal string MyProtectedInternal { get; set; }
             }
             """;
@@ -468,10 +468,10 @@ public class AzureTableAdapterGeneratorTests
                 public ITableEntity Adapt(TestModel item)
                 {
                     var entity = new TableEntity(item.MyPartitionKey, item.MyRowKey);
-
+            
                     return entity;
                 }
-
+            
                 public TestModel Adapt(TableEntity entity) => new()
                 {
                     MyPartitionKey = entity.PartitionKey,
@@ -505,13 +505,13 @@ public class AzureTableAdapterGeneratorTests
             public class TestModel
             {
                 public string State { get; set; }
-
+            
                 public string Country { get; set; }
-
+            
                 public string Abbreviation { get; set; }
-
+            
                 public string CapitalCity { get; set; }
-
+            
                 public int Population { get; set; }
             }
             """;
@@ -544,10 +544,10 @@ public class AzureTableAdapterGeneratorTests
                     {
                         { "CapitalCity", item.CapitalCity },
                     };
-
+            
                     return entity;
                 }
-
+            
                 public TestModel Adapt(TableEntity entity) => new()
                 {
                     Country = entity.PartitionKey,
@@ -582,15 +582,15 @@ public class AzureTableAdapterGeneratorTests
             public class TestModel
             {
                 public string State { get; set; }
-
+            
                 public string Country { get; set; }
-
+            
                 public string Abbreviation { get; set; }
-
+            
                 public string CapitalCity { get; set; }
-
+            
                 public int Population { get; set; }
-
+            
                 public float TotalArea { get; set; }
             }
             """;
@@ -627,10 +627,10 @@ public class AzureTableAdapterGeneratorTests
                         { "CapitalCity", item.CapitalCity },
                         { "Inhabitants", item.Population },
                     };
-
+            
                     return entity;
                 }
-
+            
                 public TestModel Adapt(TableEntity entity) => new()
                 {
                     Country = entity.PartitionKey,
@@ -657,7 +657,7 @@ public class AzureTableAdapterGeneratorTests
 
         await test.RunAsync();
     }
-    
+
     [Fact]
     public async Task Generator_Converters_ReturnsAdapter()
     {
@@ -667,30 +667,30 @@ public class AzureTableAdapterGeneratorTests
             public class TestModel
             {
                 public string Country { get; set; }
-
+            
                 public string State { get; set; }
-
+            
                 public string StateAbbreviation { get; set; }
-
+            
                 public int CityCode { get; set; }
-
+            
                 public string City { get; set; }
-
+            
                 public int Population { get; set; }
-
+            
                 public Coordinates Coordinates { get; set; }
-
+            
                 public float TotalAreaKm { get; set; }
-
+            
                 public long Epoch { get; set; }
-
+            
                 public float? ETag { get; set; }
             }
 
             public struct Coordinates
             {
                 public double Latitude { get; set; }
-
+            
                 public double Longitude { get; set; }
             }
             """;
@@ -707,39 +707,39 @@ public class AzureTableAdapterGeneratorTests
             public partial class TestModelAdapter : AzureTableAdapterBase<TestModel>
             {
                 private const float MileUnit = 0.621371f;
-
+            
                 [PartitionKeyConvert(nameof(TestModel.Country), nameof(TestModel.State), nameof(TestModel.StateAbbreviation))]
                 private string SetPartitionKey(TestModel item) => $"{item.Country}:{item.StateAbbreviation}:{item.State}";
-
+            
                 [RowKeyConvert(nameof(TestModel.CityCode), nameof(TestModel.City))]
                 private string SetRowKey(TestModel item) => $"{item.CityCode:000000}_{item.City}";
-
+            
                 // Does not ignore source property
                 [TimestampConvert]
                 private DateTimeOffset? SetTimestamp(TestModel item) => item.Epoch != 0 ? DateTimeOffset.FromUnixTimeSeconds(item.Epoch) : null;
-
+            
                 [ETagConvert(nameof(TestModel.ETag))]
                 private string? SetETag(TestModel item) => item.ETag?.ToString();
-
+            
                 [Convert(nameof(TestModel.Coordinates))]
                 private string SetCoordinates(TestModel item) => $"{item.Coordinates.Latitude:N6},{item.Coordinates.Longitude:N6}";
-
+            
                 // Convert kilometers to miles
                 [Convert(nameof(TestModel.TotalAreaKm))]
                 private float SetTotalArea(TestModel item) => item.TotalAreaKm * MileUnit;
-
+            
                 [ConvertBack(nameof(TestModel.Country))]
                 private string GetCountry(TableEntity entity) => entity.PartitionKey.Split(':')[0];
-
+            
                 [ConvertBack(nameof(TestModel.State))]
                 private string GetState(TableEntity entity) => entity.PartitionKey.Split(':')[2];
-
+            
                 [ConvertBack(nameof(TestModel.CityCode))]
                 private int GetCityCode(TableEntity entity) => int.Parse(entity.RowKey.Split('_')[0]);
-
+            
                 [ConvertBack(nameof(TestModel.City))]
                 private string GetCity(TableEntity entity) => entity.RowKey.Split('_')[1];
-
+            
                 [ConvertBack(nameof(TestModel.Coordinates))]
                 private Coordinates GetCoordinates(TableEntity entity)
                 {
@@ -750,10 +750,10 @@ public class AzureTableAdapterGeneratorTests
                         Longitude = double.Parse(parts[1]),
                     };
                 }
-
+            
                 [ConvertBack(nameof(TestModel.TotalAreaKm))]
                 private float GetTotalArea(TableEntity entity) => (float)entity.GetDouble(nameof(TestModel.TotalAreaKm)).GetValueOrDefault() / MileUnit;
-
+            
                 [ConvertBack(nameof(TestModel.ETag))]
                 private float? GetETag(TableEntity entity) => float.TryParse(entity.ETag.ToString(), out var result) ? result : null;
             }
@@ -778,18 +778,18 @@ public class AzureTableAdapterGeneratorTests
                         { "Population", item.Population },
                         { "UnixTimestamp", item.Epoch },
                     };
-
+            
                     var timestamp = SetTimestamp(item);
                     if (timestamp != default)
                         entity.Timestamp = timestamp;
-
+            
                     var etag = SetETag(item);
                     if (etag != default)
                         entity.ETag = new ETag(etag);
-
+            
                     return entity;
                 }
-
+            
                 public TestModel Adapt(TableEntity entity) => new()
                 {
                     Country = GetCountry(entity),

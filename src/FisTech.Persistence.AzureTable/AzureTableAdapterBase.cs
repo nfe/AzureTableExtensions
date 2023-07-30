@@ -1,9 +1,8 @@
 ﻿namespace FisTech.Persistence.AzureTable;
 
 // ReSharper disable once UnusedTypeParameter
-public class AzureTableAdapterBase<TSource> where TSource : class, new()
+public class AzureTableAdapterBase<TItem> where TItem : class, new()
 {
-    // TODO: Repository
     // TODO: Unit tests
     // TODO: Integration tests
     // TODO: Add tests display name
@@ -17,8 +16,4 @@ public class AzureTableAdapterBase<TSource> where TSource : class, new()
 
     // TODO: Samples
     // TODO: Documentation
-
-    // TODO: Remove Azure.Data.Tables dependency
-    // TODO: OData json serializer
-    // TODO: Http client
 }
